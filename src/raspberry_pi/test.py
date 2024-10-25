@@ -1,14 +1,35 @@
-from IOBluetooth import IOBluetoothRFCOMMChannel
+import asyncio
+from bleak import BleakClient, BleakScanner
 
-# Set up Bluetooth server
-server_sock = IOBluetoothRFCOMMChannel()
-port = 1
-server_sock.bind("", port)
-server_sock.listen(1)
+async def scan():
+    devices = await BleakScanner.discover()
+    for device in devices:
+        print(f"Device: {device.name}, Address: {device.address}")
 
-print("Waiting for connection...")
-client_sock, client_info = server_sock.accept()
-print("Accepted connection from", client_info)
 
-# Receive data
-data = client_sock.read(1024)
+# Replace with your device's address
+DEVICE_ADDRESS = "XX:XX:XX:XX:XX:XX"
+
+async def on_disconnect(client):
+    print(f"Disconnected from {client}")
+
+async def on_receive(client, data):
+    print(f"Received: {data}")
+    await client.send(data)
+
+async def connect_to_device(address):
+    async with BleakClient(address) as client:
+        if await client.is_connected():
+            print(f"Connected to {address}")
+            # Add your communication logic here
+            await asyncio.sleep(5)  # Keep the connection for 5 seconds
+        else:
+            print(f"Failed to connect to {address}")
+
+async def main():
+    print("Scanning for Bluetooth devices...")
+    await scan()
+    await connect_to_device(DEVICE_ADDRESS)
+
+if __name__ == "__main__":
+    asyncio.run(main())
