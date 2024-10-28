@@ -2,7 +2,7 @@ import asyncio
 from bleak import BleakClient
 
 # Replace with your ESP32's MAC address and characteristic UUID
-device_mac_address = "XX:XX:XX:XX:XX:XX"  # ESP32 MAC Address
+device_mac_address = "E8:9F:6D:55:15:7E"  # ESP32 MAC Address
 characteristic_uuid = "your-characteristic-uuid"  # UUID for the characteristic
 
 async def print_characteristic_value():
