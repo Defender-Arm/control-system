@@ -2,7 +2,7 @@ import asyncio
 from bleak import BleakClient, BleakScanner
 
 # Replace with your device's address
-DEVICE_ADDRESS = "84:D3:52:3F:62:34"
+DEVICE_ADDRESS = "E8:9F:6D:55:15:7E"
 
 async def scan():
     devices = await BleakScanner.discover()
