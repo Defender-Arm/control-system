@@ -35,7 +35,7 @@ try:
                 ma[i] = max(ma[i], a[i])
             print(f"{time.time()-stamp:10.7}s ({count-dropped:5}/{count:5}): {a[0]:10.7f} ({ma[0]:10.7f}) {a[1]:10.7f} ({ma[1]:10.7f}) {a[2]:10.7f} ({ma[2]:10.7f})", end="\r")
             # store
-            x_values.append(a[0] if a[0]>0.1 else 0)
+            x_values.append(a[0] if abs(a[0])>0.1 else 0)
             time_delta.append(time.time() - stamp)
         except:
             dropped += 1
