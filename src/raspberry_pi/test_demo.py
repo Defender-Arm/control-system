@@ -87,3 +87,4 @@ plt.title("X Position over Time")
 plt.legend()
 
 plt.tight_layout()
+plt.savefig("out.png")
