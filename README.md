@@ -12,15 +12,26 @@ This is the main repository for our capstone project. It contains code that is r
 - Rebecca Schmelzer
 - Wisam Ashique (`gateway` lead)
 
-## Install
+## Instructions
 
 ### Prerequisites
+
+#### Software
 - Python 3.8.X
     - Other distributions may work, however some libraries may not be compatible
 
-### Instructions
+#### Hardware
+- Computer with Bluetooth Classic capabilities (we are using Raspberry Pi 4 Model B)
+
+### Install
 1. clone repository 
    - via SSH, with `git clone git@github.com:Defender-Arm/control-system.git`
 2. in root directory of local clone, install system dependencies with `python3.8 -m pip install -r requirements.txt`
-3. run with `python3.8 main_pi.py`
-    - if you are running on a windows machine instead, run with `python3.8 main_windows.py`
+
+### Execute
+On Pi, run with `python3.8 main_pi.py`
+
+On Windows, run with `python3.8 main_windows.py`
+
+### Test
+Run test suite with `...`
