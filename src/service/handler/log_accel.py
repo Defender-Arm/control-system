@@ -1,6 +1,7 @@
 from time import monotonic
 
 from handler import Handler
+from ..filter import acc_threshold
 
 
 class LogAccHandler(Handler):
@@ -11,15 +12,17 @@ class LogAccHandler(Handler):
     last_update = 0
 
     def __init__(self):
-        self.max_acc = [0, 0, 0]
+        self.max_acc = [0.0, 0.0, 0.0]
         """Maximum x,y,z acceleration received for active duration"""
         self.count = 0
         """Measurements received"""
 
-    def step(self, acc: tuple[float, float, float]) -> None:
+    def step(self, acc: list[float]) -> None:
         # set start time if not set
         if self.start_time == 0:
             self.start_time = monotonic()
+        # filter acceleration
+        acc = acc_threshold(acc)
         # check each dimension for new highest acceleration
         for dim in range(0, 3):
             self.max_acc[dim] = max(self.max_acc[dim], acc[dim])
