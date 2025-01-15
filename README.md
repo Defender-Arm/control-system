@@ -1,20 +1,20 @@
 # Defender Arm
 
 ## Description
-This project involves a mechanical device controlled to intercept the trajectory of a tracked object. We are currently using an IMU to measure acceleration of the object, which communicates the measurements to a Raspberry Pi onboard the mechanical component to generate control signals. The target form of this project is a multi-joint arm that is able to block swings of a sword. 
+This project involves a mechanical device controlled to intercept the trajectory of a tracked object. The target form of this project is a multi-joint arm that is able to block swings of a sword. 
 
-This is the main repository for our capstone project. It contains code that is run on the Raspberry Pi. Code for the ESP32 unit is found in [this repo (`gateway`)](https://github.com/Defender-Arm/gateway) instead.
+This is the main repository for our capstone project. Code for the ESP32 unit required for some test scripts is found in [this archived repo (`gateway`)](https://github.com/Defender-Arm/gateway) instead.
 
 ### Project Members
 - Daksh Mathur
-- Gavin Jameson (`control-system` lead)
+- Gavin Jameson (`backend` lead)
 - Luke Schuurman
-- Rebecca Schmelzer
-- Wisam Ashique (`gateway` lead)
+- Rebecca Schmelzer (`frontend` lead)
+- Wisam Ashique
 
-## Instructions
+## Instructions for **demo testing scripts**
 
-### Prerequisites
+### Prerequisites 
 
 #### Software
 - Python 3.8.X
@@ -29,9 +29,4 @@ This is the main repository for our capstone project. It contains code that is r
 2. in root directory of local clone, install system dependencies with `python3.8 -m pip install -r requirements.txt`
 
 ### Execute
-On Pi, run with `python3.8 main_pi.py`
-
-On Windows, run with `python3.8 main_windows.py`
-
-### Test
-Run test suite with `...`
+Run with `python3.8 src/test/test_demo.py`
