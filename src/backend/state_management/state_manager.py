@@ -1,4 +1,5 @@
 from enum import IntEnum
+from threading import Lock
 from time import time
 from typing import List, Tuple
 
@@ -18,6 +19,7 @@ class Manager:
         """
         self._state = State.STANDBY
         self._msgs = []
+        self._mutex = Lock()
 
     def get_state(self) -> State:
         """Gets current system state.
@@ -31,64 +33,70 @@ class Manager:
         return self._msgs
 
     def standby(self) -> bool:
-        """If state is off, advances state to standby.
+        """If state is off, advances state to standby. Requires lock.
         :returns: Success
         """
-        if self.get_state() == State.OFF:
-            self._state = State.STANDBY
-            return True
-        else:
-            return False
+        with self._mutex:
+            if self.get_state() == State.OFF:
+                self._state = State.STANDBY
+                return True
+            else:
+                return False
 
     def calibrate(self) -> bool:
-        """If state is standby, advances state to calibrate.
+        """If state is standby, advances state to calibrate. Requires lock.
         :returns: Success
         """
-        if self.get_state() == State.STANDBY:
-            self._state = State.CALIBRATE
-            return True
-        else:
-            return False
+        with self._mutex:
+            if self.get_state() == State.STANDBY:
+                self._state = State.CALIBRATE
+                return True
+            else:
+                return False
 
     def ready(self) -> bool:
-        """If state is calibrate, advances state to ready.
+        """If state is calibrate, advances state to ready. Requires lock.
         :returns: Success
         """
-        if self.get_state() == State.CALIBRATE:
-            self._state = State.READY
-            return True
-        else:
-            return False
+        with self._mutex:
+            if self.get_state() == State.CALIBRATE:
+                self._state = State.READY
+                return True
+            else:
+                return False
 
     def active(self) -> bool:
-        """If state is ready, advances state to active.
+        """If state is ready, advances state to active. Requires lock.
         :returns: Success
         """
-        if self.get_state() == State.READY:
-            self._state = State.ACTIVE
-            return True
-        else:
-            return False
+        with self._mutex:
+            if self.get_state() == State.READY:
+                self._state = State.ACTIVE
+                return True
+            else:
+                return False
 
     def stop(self) -> bool:
-        """Sets state to off.
+        """Sets state to off. Requires lock.
         :returns: Success
         """
-        self._state = State.OFF
-        return True
+        with self._mutex:
+            self._state = State.OFF
+            return True
 
     def error(self, msg: str) -> bool:
-        """If state is not off, sets state to standby. Logs error messages.
+        """If state is not off, sets state to standby. Logs error messages. Requires lock.
         :returns: If state changed/was previous not standby but was successfully changed to standby
         """
-        # only keep latest 15 error messages
-        msgs = self.get_errors()
-        if len(msgs) == 15:
-            msgs.pop()
-        msgs.insert(0, (time(), msg))
-        # only return true if was not previously in standby
-        if self.get_state() > State.STANDBY:
-            self._state = State.STANDBY
-            return True
-        else:
-            return False
+        with self._mutex:
+            # only keep latest 15 error messages
+            msgs = self.get_errors()
+            if len(msgs) == 15:
+                msgs.pop()
+            msgs.insert(0, (time(), msg))
+            # only return true if was not previously in standby
+            if self.get_state() > State.STANDBY:
+                self._state = State.STANDBY
+                return True
+            else:
+                return False
