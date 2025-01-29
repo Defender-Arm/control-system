@@ -1,5 +1,15 @@
+from src.backend.external_management.connections import (
+    LEFT_CAM_OFFSET,
+    LEFT_CAM_ANGLES,
+    CAM_FOV,
+    CAM_RES
+)
+
 from numpy import ndarray
 from typing import List, Tuple
+
+
+SWORD_FILTER = None
 
 
 _history = []
@@ -12,17 +22,17 @@ def find_in_image(image: ndarray) -> Tuple[int, int]:
     raise NotImplementedError
 
 
-def create_ray(pixel_x: int, pixel_y: int) -> Tuple[float, float, float]:
+def create_ray(pixel_x: int, pixel_y: int) -> Tuple[float, float]:
     """Calculates angles for line in real space which passes from the center of
     the camera through the object in the image.
-    :returns: Angles in radians along x-axis, then y-axis, then z-axis
+    :return: Angles in radians from camera along x-axis, then y-axis
     """
     raise NotImplementedError
 
 
 def locate_object(
-        left_ray_angles: Tuple[float, float, float],
-        right_ray_angles: Tuple[float, float, float]
+        left_ray_angles: Tuple[float, float],
+        right_ray_angles: Tuple[float, float]
 ) -> Tuple[float, float, float]:
     """Finds where two rays intersect or are the closest to intercepting.
     :raise RuntimeError: Rays do not intersect and shortest distance between them is greater than 0.1 metre
