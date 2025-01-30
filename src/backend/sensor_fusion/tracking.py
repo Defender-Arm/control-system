@@ -25,9 +25,12 @@ def find_in_image(image: ndarray) -> Tuple[int, int]:
 def create_ray(pixel_x: int, pixel_y: int) -> Tuple[float, float]:
     """Calculates angles for line in real space which passes from the center of
     the camera through the object in the image.
-    :return: Angles in radians from camera along x-axis, then y-axis
+    :return: Angles in radians from camera along x-axis (right), then y-axis (up)
     """
-    raise NotImplementedError
+    angle_x = (pixel_x / CAM_RES[0]) * CAM_FOV - (CAM_FOV / 2)
+    vertical_fov = (CAM_RES[1] / CAM_RES[0]) * CAM_FOV
+    angle_y = (pixel_y / CAM_RES[1]) * vertical_fov - (vertical_fov / 2)
+    return angle_x, angle_y
 
 
 def locate_object(
