@@ -1,8 +1,7 @@
-"use client";
-import React from 'react';
-import styles from '../styles/StatePanel.module.css';
+import React from "react";
+import styles from "../styles/StatePanel.module.css";
 
-export type SystemState = 'OFF' | 'STANDBY' | 'CALIBRATE' | 'READY' | 'ACTIVE';
+export type SystemState = "OFF" | "STANDBY" | "CALIBRATE" | "READY" | "ACTIVE";
 
 interface StatePanelProps {
   currentState: SystemState;
@@ -14,11 +13,12 @@ const StatePanel: React.FC<StatePanelProps> = ({ currentState, onStateChange }) 
     <div className={styles.statePanel}>
       <h2>System State: {currentState}</h2>
       <div className={styles.buttonGroup}>
-        {(['OFF', 'STANDBY', 'CALIBRATE', 'READY', 'ACTIVE'] as SystemState[]).map((state) => (
+        {(["OFF", "STANDBY", "CALIBRATE", "READY", "ACTIVE"] as SystemState[]).map((state) => (
           <button
             key={state}
             onClick={() => onStateChange(state)}
             disabled={currentState === state}
+            className={`${styles.button} ${styles[state.toLowerCase()]}`}
           >
             {state}
           </button>
@@ -28,4 +28,4 @@ const StatePanel: React.FC<StatePanelProps> = ({ currentState, onStateChange }) 
   );
 };
 
-export default StatePanel; 
+export default StatePanel;

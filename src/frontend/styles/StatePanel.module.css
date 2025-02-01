@@ -1,39 +1,61 @@
-.controlPanel {
+.statePanel {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  background: #1e1e1e;  /* Dark background */
   padding: 20px;
-  background-color: #f0f0f0;
-  border-radius: 8px;
+  border-radius: 12px;
+  box-shadow: 0px 4px 10px rgba(255, 255, 255, 0.1);
+  width: 100%;
+  max-width: 900px;
+  font-family: "Poppins", sans-serif;
+  text-align: center;
+  color: #ffffff;
 }
 
-.controlPanel h3 {
+.heading {
+  font-size: 1.5rem;
+  font-weight: bold;
   margin-bottom: 15px;
-  color: #333;
 }
 
-.controlPanel button {
-  margin: 5px 0;
-  padding: 10px 20px;
-  width: 150px;
+.buttonGroup {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 800px;
+  flex-wrap: nowrap;
+  margin: 20px 0;
+}
+
+.button {
+  padding: 8px 12px;
   border: none;
-  border-radius: 4px;
-  background-color: #ddd;
-  color: #555;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: bold;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: 0.2s;
+  min-width: 120px;
+  flex: 1;
+  text-transform: uppercase;
 }
 
-.controlPanel button:hover:not(:disabled) {
-  background-color: #ccc;
+/* Local class-based styles for each state */
+.off { background: #444; color: #fff; }
+.standby { background: #ffc107; color: #000; }
+.calibrate { background: #17a2b8; color: #fff; }
+.ready { background: #28a745; color: #fff; }
+.active { background: #dc3545; color: #fff; }
+
+.button:hover {
+  opacity: 0.8;
 }
 
-.controlPanel button:disabled {
-  background-color: #bbb;
+.button:disabled {
+  background: #555 !important;
+  color: #aaa !important;
   cursor: not-allowed;
 }
-
-.activeButton {
-  background-color: #4caf50 !important;
-  color: white;
-} 
