@@ -29,7 +29,7 @@ const StatePanel: React.FC<StatePanelProps> = ({ currentState, onStateChange }) 
     // Allow decreasing to any lower state
     if (nextNum < currentNum) return true;
 
-    // For increasing, must go in sequence
+    // For increasing, must go in sequence??
     return nextNum === currentNum + 1;
   };
 
