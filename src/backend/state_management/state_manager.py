@@ -1,11 +1,11 @@
 # FastAPI setup with CORS middleware to allow frontend connections
 from fastapi import FastAPI, WebSocket, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from typing import List
+from typing import List, Tuple
 import json
 from enum import IntEnum
 from threading import Lock
-import time
+from time import time
 
 app = FastAPI()
 
@@ -79,6 +79,27 @@ class StateManager:
                 self.error_messages.append((time.time(), error_msg))
                 return False
 
+    def get_state(self):
+        return self.current_state
+
+    def get_errors(self):
+        return self.error_messages
+
+    async def standby(self):
+        return await self.update_state("STANDBY")
+
+    async def calibrate(self):
+        return await self.update_state("CALIBRATE")
+
+    async def ready(self):
+        return await self.update_state("READY")
+
+    async def active(self):
+        return await self.update_state("ACTIVE")
+
+    async def stop(self):
+        return await self.update_state("OFF")
+
 state_manager = StateManager()
 
 @app.websocket("/ws")
@@ -90,21 +111,52 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             message = json.loads(data)
             if message["type"] == "state_change":
-                await state_manager.update_state(message["state"])
+                new_state = message["state"]
+                success = False
+                
+                # Use state transition methods
+                if new_state == "STANDBY":
+                    success = await state_manager.standby()
+                elif new_state == "CALIBRATE":
+                    success = await state_manager.calibrate()
+                elif new_state == "READY":
+                    success = await state_manager.ready()
+                elif new_state == "ACTIVE":
+                    success = await state_manager.active()
+                elif new_state == "OFF":
+                    success = await state_manager.stop()
+                
+                if success:
+                    await state_manager.broadcast_state()
     except:
         connected_clients.remove(websocket)
 
 @app.get("/api/state")
 async def get_state():
-    return {"state": state_manager.current_state.name}
+    return {"state": state_manager.get_state().name}
 
 @app.post("/api/state")
 async def set_state(state_data: dict):
-    success = await state_manager.update_state(state_data["state"])
+    new_state = state_data["state"]
+    success = False
+    
+    # Use state transition methods
+    if new_state == "STANDBY":
+        success = await state_manager.standby()
+    elif new_state == "CALIBRATE":
+        success = await state_manager.calibrate()
+    elif new_state == "READY":
+        success = await state_manager.ready()
+    elif new_state == "ACTIVE":
+        success = await state_manager.active()
+    elif new_state == "OFF":
+        success = await state_manager.stop()
+        
     if not success:
-        raise HTTPException(status_code=400, message="Invalid state transition")
-    return {"state": state_manager.current_state.name}
+        raise HTTPException(status_code=400, detail="Invalid state transition")
+    await state_manager.broadcast_state()
+    return {"state": state_manager.get_state().name}
 
 @app.get("/api/errors")
 async def get_errors():
-    return {"errors": state_manager.error_messages}
+    return {"errors": state_manager.get_errors()}
