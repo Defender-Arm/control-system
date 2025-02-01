@@ -1,0 +1,39 @@
+.controlPanel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  background-color: #f0f0f0;
+  border-radius: 8px;
+}
+
+.controlPanel h3 {
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.controlPanel button {
+  margin: 5px 0;
+  padding: 10px 20px;
+  width: 150px;
+  border: none;
+  border-radius: 4px;
+  background-color: #ddd;
+  color: #555;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.controlPanel button:hover:not(:disabled) {
+  background-color: #ccc;
+}
+
+.controlPanel button:disabled {
+  background-color: #bbb;
+  cursor: not-allowed;
+}
+
+.activeButton {
+  background-color: #4caf50 !important;
+  color: white;
+} 
