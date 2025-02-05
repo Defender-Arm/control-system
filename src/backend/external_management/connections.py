@@ -1,3 +1,4 @@
+import cv2
 from enum import IntEnum
 from numpy import ndarray
 from typing import Optional, Tuple
@@ -27,18 +28,45 @@ class Ext:
     def __init__(self):
         """Creates and stores all connections to external devices.
         """
-        raise NotImplementedError
+        self._right_cam = None
+        self._left_cam = None
+        self.connect_cameras()
+
+    def connect_cameras(self):
+        """Opens connection to cameras.
+        """
+        self._right_cam = cv2.VideoCapture(RIGHT_CAM_INDEX)
+        self._left_cam = cv2.VideoCapture(LEFT_CAM_INDEX)
+
+    def disconnect_cameras(self):
+        """Releases captures.
+        """
+        if self._right_cam:
+            self._right_cam.release()
+        if self._left_cam:
+            self._left_cam.release()
 
     def verify_connection(self) -> bool:
         """Ensures all devices are connected.
-        :return: If all devices connected"""
-        raise NotImplementedError
+        :return: If all devices connected
+        """
+        return (
+                self._right_cam and self._right_cam.isOpened() and
+                self._left_cam and self._left_cam.isOpened()
+        )
+        # add better error messages
 
-    def take_photos(self) -> Tuple[Optional[ndarray], Optional[ndarray]]:
+    def take_photos(self) -> Tuple[ndarray, ndarray]:
         """Gets snapshot from both cameras.
         :return: Arm's left camera image, then arm's right camera image. Image is ``None`` if camera cannot be reached.
         """
-        raise NotImplementedError
+        ret, frame_r = self._right_cam.read()
+        if not ret:
+            raise RuntimeError
+        ret, frame_l = self._left_cam.read()
+        if not ret:
+            raise RuntimeError
+        return frame_l, frame_r
 
     def arm_angles(self) -> Tuple[float, float, float]:
         """Gets angles of all arm joints, from base to end effector.
