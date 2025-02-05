@@ -4,22 +4,50 @@ from src.backend.external_management.connections import (
     CAM_FOV,
     CAM_RES
 )
+from src.backend.error.standby_transition import StandbyTransition
 
-from numpy import ndarray
-from typing import List, Tuple
+import cv2
+import numpy
+from typing import List, Optional, Tuple
 
 
-SWORD_FILTER = None
+LOWER_RED_1 = numpy.ndarray([0, 120, 70])
+UPPER_RED_1 = numpy.ndarray([10, 255, 255])
+LOWER_RED_2 = numpy.ndarray([170, 120, 70])
+UPPER_RED_2 = numpy.ndarray([180, 255, 255])
 
 
 _history = []
 
 
-def find_in_image(image: ndarray) -> Tuple[int, int]:
+def find_in_image(image: numpy.ndarray) -> Optional[Tuple[Tuple[int, int], float]]:
     """Finds the pixel coordinates of the centre of the object in the image.
-    :return: Pixel location, (x, y) from top left
+    :return: Pixel location, (x, y) from top left, angle from upwards,
     """
-    raise NotImplementedError
+    # convert to HSV for processing
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    # Create masks for red color
+    mask1 = cv2.inRange(hsv, LOWER_RED_1, UPPER_RED_1)
+    mask2 = cv2.inRange(hsv, LOWER_RED_2, UPPER_RED_2)
+    mask = mask1 + mask2
+    # Apply morphological operations to remove noise
+    kernel = numpy.ones((5, 5), numpy.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    # Find contours
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if contours:
+        # Find the largest contour (assuming it's the stick)
+        largest_contour = max(contours, key=cv2.contourArea)
+        # Fit a rotated rectangle
+        rect = cv2.minAreaRect(largest_contour)
+
+        # Extract center and orientation
+        center = (int(rect[0][0]), int(rect[0][1]))  # x, y
+        angle = rect[2]  # Rotation angle
+
+        return center, angle
+    else:
+        return None
 
 
 def create_ray(pixel_x: int, pixel_y: int) -> Tuple[float, float]:
@@ -41,7 +69,7 @@ def locate_object(
     :raise RuntimeError: Rays do not intersect and shortest distance between them is greater than 0.1 metre
     :return: Metres from base joint; x-axis, then y-axis, then z-axis
     """
-    raise RuntimeError
+    raise StandbyTransition("Unimplemented")
 
 
 def store_location(timestamp: float, location: Tuple[float, float, float]) -> None:
