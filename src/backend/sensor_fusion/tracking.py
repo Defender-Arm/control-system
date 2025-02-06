@@ -7,7 +7,9 @@ from src.backend.external_management.connections import (
 from src.backend.error.standby_transition import StandbyTransition
 
 import cv2
+from math import cos, sin
 import numpy
+from time import monotonic
 from typing import List, Optional, Tuple
 
 
@@ -22,7 +24,7 @@ _history = []
 
 def find_in_image(image: numpy.ndarray) -> Optional[Tuple[Tuple[int, int], float]]:
     """Finds the pixel coordinates of the centre of the object in the image.
-    :return: Pixel location, (x, y) from top left, angle from upwards,
+    :return: Pixel location, (x, y) from top left, angle from upwards; None if object could not be found
     """
     # convert to HSV for processing
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -40,11 +42,9 @@ def find_in_image(image: numpy.ndarray) -> Optional[Tuple[Tuple[int, int], float
         largest_contour = max(contours, key=cv2.contourArea)
         # Fit a rotated rectangle
         rect = cv2.minAreaRect(largest_contour)
-
         # Extract center and orientation
         center = (int(rect[0][0]), int(rect[0][1]))  # x, y
         angle = rect[2]  # Rotation angle
-
         return center, angle
     else:
         return None
@@ -61,15 +61,51 @@ def create_ray(pixel_x: int, pixel_y: int) -> Tuple[float, float]:
     return angle_x, angle_y
 
 
+def _angles_to_vector(angle_x: float, angle_y: float) -> Tuple[float, float, float]:
+    """Converts xy and yz angles to a vector.
+    :return: Unit vector
+    """
+    x = sin(angle_x) * cos(angle_y)
+    y = cos(angle_x) * cos(angle_y)
+    z = sin(angle_y)
+    return x, y, z
+
+
 def locate_object(
         left_ray_angles: Tuple[float, float],
         right_ray_angles: Tuple[float, float]
 ) -> Tuple[float, float, float]:
     """Finds where two rays intersect or are the closest to intercepting.
-    :raise RuntimeError: Rays do not intersect and shortest distance between them is greater than 0.1 metre
+    :raise StandbyTransition: Rays do not intersect and shortest distance between them is greater than 0.1 metre
     :return: Metres from base joint; x-axis, then y-axis, then z-axis
     """
-    raise StandbyTransition("Unimplemented")
+    # parametric vectors r(t) = p + t*d, CAM_OFFSET = p, left = r1, right = r2 (see Cramer's rule)
+    d1 = _angles_to_vector(left_ray_angles[0] + LEFT_CAM_ANGLES[0], left_ray_angles[1] + LEFT_CAM_ANGLES[1])
+    d2 = _angles_to_vector(right_ray_angles[0] - LEFT_CAM_ANGLES[0], right_ray_angles[1] + LEFT_CAM_ANGLES[1])
+    p1 = (LEFT_CAM_OFFSET[0], LEFT_CAM_OFFSET[1], LEFT_CAM_OFFSET[2])
+    p2 = (-LEFT_CAM_OFFSET[0], LEFT_CAM_OFFSET[1], LEFT_CAM_OFFSET[2])
+    # minimize squared distance between r1 and r2
+    # (d1 * d1) * t1 + (d1 * d2) * t2 = (p2 - p1) * d1
+    # (d1 * d2) * t1 + (d2 * d2) * t2 = (p2 - p1) * d2
+    #                v
+    # A = d1 * d1  B = d1 * d2  C = (p2 - p1) * d1  D = d2 * d2  E = (p2 - p1) * d2
+    a = d1[0] * d1[0] + d1[1] * d1[1] + d1[2] * d1[2]
+    b = d1[0] * d2[0] + d1[1] * d2[1] + d1[2] * d2[2]
+    # p1 and p2 symmetrical across yz plane, xz and xy identical -> 0
+    c = (-2 * p1[0]) * d1[0] + 0 + 0
+    d = d2[0] * d2[0] + d2[1] * d2[1] + d2[2] * d2[2]
+    e = (-2 * p1[0]) * d2[0] + 0 + 0
+    den = a * d - b**2
+    t1 = (c * d - b * e) / den
+    t2 = (a * e - b * c) / den
+    q1 = p1 + t1 * d1
+    q2 = p2 + t2 * d2
+    distance = ((q1[0] - q2[0])**2 + (q1[1] - q2[1])**2 + (q1[2] - q2[2])**2)**0.5
+    if distance > 0.1:
+        raise StandbyTransition(f'Cameras localize object to farther than 0.1m apart ({distance}m)')
+    location = (q1 + q2) / 2
+    store_location(monotonic(), location)
+    return location
 
 
 def store_location(timestamp: float, location: Tuple[float, float, float]) -> None:
