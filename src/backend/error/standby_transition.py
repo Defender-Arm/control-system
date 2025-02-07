@@ -1,3 +1,3 @@
-class StandbyTransition(RuntimeError):
-    def __init__(self, msg: str):
-        super(str, msg)
+class StandbyTransition(Exception):
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
