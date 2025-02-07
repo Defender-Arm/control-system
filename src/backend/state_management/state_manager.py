@@ -28,7 +28,7 @@ class State(IntEnum):
 
 connected_clients: List[WebSocket] = []
 
-class Manager:
+class StateManager:
     def __init__(self):
         """Creates state manager. Sets OFF as default state.
         """
@@ -139,7 +139,35 @@ class Manager:
             else:
                 return False
 
-state_manager = Manager()
+    def finish_calibration(self, success: bool) -> bool:
+        """Handles state transition after calibration completes.
+        :param success: Whether calibration was successful
+        :returns: True if transition successful
+        """
+        with self._mutex:
+            if self._state != State.CALIBRATE:
+                return False
+            if success:
+                self._state = State.READY
+            else:
+                self._state = State.STANDBY
+            return True
+
+    def finish_active(self, success: bool) -> bool:
+        """Handles state transition after active state ends.
+        :param success: Whether active state completed successfully
+        :returns: True if transition successful
+        """
+        with self._mutex:
+            if self._state != State.ACTIVE:
+                return False
+            if success:
+                self._state = State.READY
+            else:
+                self._state = State.STANDBY
+            return True
+
+state_manager = StateManager()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
