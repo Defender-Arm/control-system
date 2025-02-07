@@ -167,6 +167,25 @@ class StateManager:
                 self._state = State.STANDBY
             return True
 
+    def detect_sensor_failure(self) -> bool:
+        """Simulates detection of a sensor failure.
+        :returns: True if a sensor failure is detected
+        """
+        # placeholder for sensor failure detection logic here
+        return False
+
+    def detect_calibration_error(self) -> bool:
+        """Simulates detection of a calibration error.
+        :returns: True if a calibration error is detected
+        """
+        # placeholder for calibration error detection logic here
+        return False
+
+    def handle_errors(self):
+        """Handles errors by transitioning to standby state if any error is detected."""
+        if self.detect_sensor_failure() or self.detect_calibration_error():
+            self.error("Detected sensor or calibration error")
+
 state_manager = StateManager()
 
 @app.websocket("/ws")
@@ -194,6 +213,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 if success:
                     await state_manager.broadcast_state()
+                else:
+                    state_manager.handle_errors()
     except:
         connected_clients.remove(websocket)
 
