@@ -28,18 +28,30 @@ class State(IntEnum):
 
 connected_clients: List[WebSocket] = []
 
-# StateManager class handling state transitions and WebSocket broadcasts
-class StateManager:
+class Manager:
     def __init__(self):
-        self.current_state = State.OFF
-        self.error_messages = []
-        self._lock = Lock()
+        """Creates state manager. Sets OFF as default state.
+        """
+        self._state = State.OFF
+        self._msgs = []
+        self._mutex = Lock()
 
-    # Broadcasts the current state to all connected clients
+    def get_state(self) -> State:
+        """Gets current system state.
+        :return: State enum
+        """
+        return self._state
+
+    def get_errors(self) -> List[Tuple[float, str]]:
+        """Returns list of last 15 errors and the time they happened.
+        :returns: List of (``timestamp``, ``msg``)"""
+        return self._msgs
+
     async def broadcast_state(self):
+        """Broadcasts current state to all connected WebSocket clients"""
         message = json.dumps({
             "type": "state_update",
-            "state": self.current_state.name
+            "state": self._state.name
         })
         for client in connected_clients:
             try:
@@ -47,60 +59,87 @@ class StateManager:
             except:
                 connected_clients.remove(client)
 
-    # Updates the current state and validates transitions
-    async def update_state(self, new_state: str) -> bool:
-        with self._lock:
-            try:
-                new_state_enum = State[new_state]
-                current_state_num = int(self.current_state)
-                new_state_num = int(new_state_enum)
-
-                # Allow decreasing to any lower state
-                if new_state_num < current_state_num:
-                    self.current_state = new_state_enum
-                    await self.broadcast_state()
-                    return True
-
-                # For increasing states, must go in sequence
-                if new_state_num == current_state_num + 1:
-                    self.current_state = new_state_enum
-                    await self.broadcast_state()
-                    return True
-
-                # Invalid transition
-                error_msg = f"Invalid state transition from {self.current_state.name} to {new_state}"
-                self.error_messages.append((time.time(), error_msg))
-                if len(self.error_messages) > 15:
-                    self.error_messages.pop(0)
+    def standby(self) -> bool:
+        """If state is off, advances state to standby. Requires lock.
+        :returns: Success
+        """
+        with self._mutex:
+            if self.get_state() == State.OFF:
+                self._state = State.STANDBY
+                return True
+            else:
+                self._msgs.append((time(), f"Invalid transition from {self._state.name} to STANDBY"))
+                if len(self._msgs) > 15:
+                    self._msgs.pop(0)
                 return False
 
-            except KeyError:
-                error_msg = f"Invalid state: {new_state}"
-                self.error_messages.append((time.time(), error_msg))
+    def calibrate(self) -> bool:
+        """If state is standby, advances state to calibrate. Requires lock.
+        :returns: Success
+        """
+        with self._mutex:
+            if self.get_state() == State.STANDBY:
+                self._state = State.CALIBRATE
+                return True
+            else:
+                self._msgs.append((time(), f"Invalid transition from {self._state.name} to CALIBRATE"))
+                if len(self._msgs) > 15:
+                    self._msgs.pop(0)
                 return False
 
-    def get_state(self):
-        return self.current_state
+    def ready(self) -> bool:
+        """If state is calibrate, advances state to ready. Requires lock.
+        :returns: Success
+        """
+        with self._mutex:
+            if self.get_state() == State.CALIBRATE:
+                self._state = State.READY
+                return True
+            else:
+                self._msgs.append((time(), f"Invalid transition from {self._state.name} to READY"))
+                if len(self._msgs) > 15:
+                    self._msgs.pop(0)
+                return False
 
-    def get_errors(self):
-        return self.error_messages
+    def active(self) -> bool:
+        """If state is ready, advances state to active. Requires lock.
+        :returns: Success
+        """
+        with self._mutex:
+            if self.get_state() == State.READY:
+                self._state = State.ACTIVE
+                return True
+            else:
+                self._msgs.append((time(), f"Invalid transition from {self._state.name} to ACTIVE"))
+                if len(self._msgs) > 15:
+                    self._msgs.pop(0)
+                return False
 
-    async def standby(self):
-        return await self.update_state("STANDBY")
+    def stop(self) -> bool:
+        """Sets state to off. Requires lock.
+        :returns: Success
+        """
+        with self._mutex:
+            self._state = State.OFF
+            return True
 
-    async def calibrate(self):
-        return await self.update_state("CALIBRATE")
+    def error(self, msg: str) -> bool:
+        """If state is not off, sets state to standby. Logs error messages. Requires lock.
+        :returns: If state changed/was previous not standby but was successfully changed to standby
+        """
+        with self._mutex:
+            # only keep latest 15 error messages
+            if len(self._msgs) == 15:
+                self._msgs.pop()
+            self._msgs.insert(0, (time(), msg))
+            # only return true if was not previously in standby
+            if self.get_state() > State.STANDBY:
+                self._state = State.STANDBY
+                return True
+            else:
+                return False
 
-    async def ready(self):
-        return await self.update_state("READY")
-
-    async def active(self):
-        return await self.update_state("ACTIVE")
-
-    async def stop(self):
-        return await self.update_state("OFF")
-
-state_manager = StateManager()
+state_manager = Manager()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -114,17 +153,16 @@ async def websocket_endpoint(websocket: WebSocket):
                 new_state = message["state"]
                 success = False
                 
-                # Use state transition methods
                 if new_state == "STANDBY":
-                    success = await state_manager.standby()
+                    success = state_manager.standby()
                 elif new_state == "CALIBRATE":
-                    success = await state_manager.calibrate()
+                    success = state_manager.calibrate()
                 elif new_state == "READY":
-                    success = await state_manager.ready()
+                    success = state_manager.ready()
                 elif new_state == "ACTIVE":
-                    success = await state_manager.active()
+                    success = state_manager.active()
                 elif new_state == "OFF":
-                    success = await state_manager.stop()
+                    success = state_manager.stop()
                 
                 if success:
                     await state_manager.broadcast_state()
@@ -140,17 +178,16 @@ async def set_state(state_data: dict):
     new_state = state_data["state"]
     success = False
     
-    # Use state transition methods
     if new_state == "STANDBY":
-        success = await state_manager.standby()
+        success = state_manager.standby()
     elif new_state == "CALIBRATE":
-        success = await state_manager.calibrate()
+        success = state_manager.calibrate()
     elif new_state == "READY":
-        success = await state_manager.ready()
+        success = state_manager.ready()
     elif new_state == "ACTIVE":
-        success = await state_manager.active()
+        success = state_manager.active()
     elif new_state == "OFF":
-        success = await state_manager.stop()
+        success = state_manager.stop()
         
     if not success:
         raise HTTPException(status_code=400, detail="Invalid state transition")
