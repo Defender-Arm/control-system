@@ -3,10 +3,12 @@ from enum import IntEnum
 from numpy import ndarray
 from typing import Optional, Tuple
 
+from src.backend.error.standby_transition import StandbyTransition
+
 
 LEFT_CAM_INDEX = 0
 RIGHT_CAM_INDEX = 1
-LEFT_CAM_OFFSET = (0.0, 0.0, 0.0)  # TODO m from origin
+LEFT_CAM_OFFSET = (0.4, 0.0, 0.0)  # TODO m from origin
 LEFT_CAM_ANGLES = (0.0, 0.0, 0.0)  # TODO rad from origin
 CAM_FOV = 0.0  # TODO rad
 CAM_RESOLUTION = (0.0, 0.0)  # TODO pixel X * pixel Y
@@ -46,26 +48,25 @@ class Ext:
         if self._left_cam:
             self._left_cam.release()
 
-    def verify_connection(self) -> bool:
+    def verify_connection(self):
         """Ensures all devices are connected.
-        :return: If all devices connected
+        :raise StandbyTransition: At least one device is not reachable/connected.
         """
-        return (
-                self._right_cam and self._right_cam.isOpened() and
-                self._left_cam and self._left_cam.isOpened()
-        )
-        # add better error messages
+        if not self._left_cam and self._left_cam.isOpened():
+            raise StandbyTransition(f'Left camera {LEFT_CAM_INDEX} is not open')
+        if not self._right_cam and self._right_cam.isOpened():
+            raise StandbyTransition(f'Right camera {RIGHT_CAM_INDEX} is not open')
 
     def take_photos(self) -> Tuple[ndarray, ndarray]:
         """Gets snapshot from both cameras.
         :return: Arm's left camera image, then arm's right camera image. Image is ``None`` if camera cannot be reached.
         """
-        ret, frame_r = self._right_cam.read()
-        if not ret:
-            raise RuntimeError
         ret, frame_l = self._left_cam.read()
         if not ret:
-            raise RuntimeError
+            raise StandbyTransition(f'Left camera {LEFT_CAM_INDEX} failed to read')
+        ret, frame_r = self._right_cam.read()
+        if not ret:
+            raise StandbyTransition(f'Right camera {RIGHT_CAM_INDEX} failed to read')
         return frame_l, frame_r
 
     def arm_angles(self) -> Tuple[float, float, float]:

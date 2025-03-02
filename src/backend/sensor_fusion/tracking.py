@@ -2,7 +2,7 @@ from src.backend.external_management.connections import (
     LEFT_CAM_OFFSET,
     LEFT_CAM_ANGLES,
     CAM_FOV,
-    CAM_RES
+    CAM_RESOLUTION
 )
 from src.backend.error.standby_transition import StandbyTransition
 
@@ -55,9 +55,9 @@ def create_ray(pixel_x: int, pixel_y: int) -> Tuple[float, float]:
     the camera through the object in the image.
     :return: Angles in radians from camera along x-axis (right), then y-axis (up)
     """
-    angle_x = (pixel_x / CAM_RES[0]) * CAM_FOV - (CAM_FOV / 2)
-    vertical_fov = (CAM_RES[1] / CAM_RES[0]) * CAM_FOV
-    angle_y = (pixel_y / CAM_RES[1]) * vertical_fov - (vertical_fov / 2)
+    angle_x = (pixel_x / CAM_RESOLUTION[0]) * CAM_FOV - (CAM_FOV / 2)
+    vertical_fov = (CAM_RESOLUTION[1] / CAM_RESOLUTION[0]) * CAM_FOV
+    angle_y = (pixel_y / CAM_RESOLUTION[1]) * vertical_fov - (vertical_fov / 2)
     return angle_x, angle_y
 
 
