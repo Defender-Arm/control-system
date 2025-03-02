@@ -1,9 +1,26 @@
+# FastAPI setup with CORS middleware to allow frontend connections
+from fastapi import FastAPI, WebSocket, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from typing import List, Tuple
+import json
 from enum import IntEnum
 from threading import Lock
 from time import time
-from typing import List, Tuple
 
+from pydantic import BaseModel
 
+app = FastAPI()
+
+# Add CORS middleware - allows frontend to connect to backend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # localhost:3000 is the frontend URL for now
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# State enumeration defining valid system states in order
 class State(IntEnum):
     OFF = 0
     STANDBY = 1
@@ -11,13 +28,13 @@ class State(IntEnum):
     READY = 3
     ACTIVE = 4
 
+connected_clients: List[WebSocket] = []
 
-class Manager:
-
+class StateManager:
     def __init__(self):
-        """Creates state manager. Sets standby as default state.
+        """Creates state manager. Sets OFF as default state.
         """
-        self._state = State.STANDBY
+        self._state = State.OFF
         self._msgs = []
         self._mutex = Lock()
 
@@ -32,6 +49,18 @@ class Manager:
         :returns: List of (``timestamp``, ``msg``)"""
         return self._msgs
 
+    async def broadcast_state(self):
+        """Broadcasts current state to all connected WebSocket clients"""
+        message = json.dumps({
+            "type": "state_update",
+            "state": self._state.name
+        })
+        for client in connected_clients:
+            try:
+                await client.send_text(message)
+            except:
+                connected_clients.remove(client)
+
     def standby(self) -> bool:
         """If state is off, advances state to standby. Requires lock.
         :returns: Success
@@ -41,6 +70,9 @@ class Manager:
                 self._state = State.STANDBY
                 return True
             else:
+                self._msgs.append((time(), f"Invalid transition from {self._state.name} to STANDBY"))
+                if len(self._msgs) > 15:
+                    self._msgs.pop(0)
                 return False
 
     def calibrate(self) -> bool:
@@ -52,6 +84,9 @@ class Manager:
                 self._state = State.CALIBRATE
                 return True
             else:
+                self._msgs.append((time(), f"Invalid transition from {self._state.name} to CALIBRATE"))
+                if len(self._msgs) > 15:
+                    self._msgs.pop(0)
                 return False
 
     def ready(self) -> bool:
@@ -63,6 +98,9 @@ class Manager:
                 self._state = State.READY
                 return True
             else:
+                self._msgs.append((time(), f"Invalid transition from {self._state.name} to READY"))
+                if len(self._msgs) > 15:
+                    self._msgs.pop(0)
                 return False
 
     def active(self) -> bool:
@@ -74,6 +112,9 @@ class Manager:
                 self._state = State.ACTIVE
                 return True
             else:
+                self._msgs.append((time(), f"Invalid transition from {self._state.name} to ACTIVE"))
+                if len(self._msgs) > 15:
+                    self._msgs.pop(0)
                 return False
 
     def stop(self) -> bool:
@@ -90,13 +131,146 @@ class Manager:
         """
         with self._mutex:
             # only keep latest 15 error messages
-            msgs = self.get_errors()
-            if len(msgs) == 15:
-                msgs.pop()
-            msgs.insert(0, (time(), msg))
+            if len(self._msgs) == 15:
+                self._msgs.pop()
+            self._msgs.insert(0, (time(), msg))
             # only return true if was not previously in standby
             if self.get_state() > State.STANDBY:
                 self._state = State.STANDBY
                 return True
             else:
                 return False
+
+    def finish_calibration(self, success: bool) -> bool:
+        """Handles state transition after calibration completes.
+        :param success: Whether calibration was successful
+        :returns: True if transition successful
+        """
+        with self._mutex:
+            if self._state != State.CALIBRATE:
+                return False
+            if success:
+                self._state = State.READY
+            else:
+                self._state = State.STANDBY
+            return True
+
+    def finish_active(self, success: bool) -> bool:
+        """Handles state transition after active state ends.
+        :param success: Whether active state completed successfully
+        :returns: True if transition successful
+        """
+        with self._mutex:
+            if self._state != State.ACTIVE:
+                return False
+            if success:
+                self._state = State.READY
+            else:
+                self._state = State.STANDBY
+            return True
+
+    def detect_sensor_failure(self) -> bool:
+        """Simulates detection of a sensor failure.
+        :returns: True if a sensor failure is detected
+        """
+        # placeholder for sensor failure detection logic here
+        return False
+
+    def detect_calibration_error(self) -> bool:
+        """Simulates detection of a calibration error.
+        :returns: True if a calibration error is detected
+        """
+        # placeholder for calibration error detection logic here
+        return False
+
+    def handle_errors(self):
+        """Handles errors by transitioning to standby state if any error is detected."""
+        if self.detect_sensor_failure() or self.detect_calibration_error():
+            self.error("Detected sensor or calibration error")
+
+state_manager = StateManager()
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    connected_clients.append(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            print(f"Received WebSocket message: {data}")  # Debug logging
+            message = json.loads(data)
+            if message["type"] == "state_change":
+                new_state = message["state"]
+                success = False
+                
+                if new_state == "STANDBY":
+                    success = state_manager.standby()
+                elif new_state == "CALIBRATE":
+                    success = state_manager.calibrate()
+                elif new_state == "READY":
+                    success = state_manager.ready()
+                elif new_state == "ACTIVE":
+                    success = state_manager.active()
+                elif new_state == "OFF":
+                    success = state_manager.stop()
+                
+                if success:
+                    await state_manager.broadcast_state()
+                else:
+                    state_manager.handle_errors()
+    except Exception as e:
+        print(f"WebSocket error: {str(e)}")  # Debug logging
+        connected_clients.remove(websocket)
+
+@app.get("/api/state")
+async def get_state():
+    return {"state": state_manager.get_state().name}
+
+class StateResponse(BaseModel):
+    state: str
+
+class StateUpdate(BaseModel):
+    state: str
+
+@app.post("/api/state", response_model=StateResponse)
+async def set_state(state_data: StateUpdate):
+    """
+    Update the system state.
+    
+    - **state**: Target state (OFF, STANDBY, CALIBRATE, READY, ACTIVE)
+    
+    Returns:
+        Current state after attempted transition
+    """
+    try:
+        new_state = state_data.state
+    except KeyError:
+        raise HTTPException(status_code=400, detail="Missing 'state' field")
+    
+    if new_state not in [state.name for state in State]:
+        raise HTTPException(status_code=400, detail=f"Invalid state: {new_state}")
+        
+    success = False
+    
+    try:
+        if new_state == "STANDBY":
+            success = state_manager.standby()
+        elif new_state == "CALIBRATE":
+            success = state_manager.calibrate()
+        elif new_state == "READY":
+            success = state_manager.ready()
+        elif new_state == "ACTIVE":
+            success = state_manager.active()
+        elif new_state == "OFF":
+            success = state_manager.stop()
+            
+        if not success:
+            raise HTTPException(status_code=400, detail="Invalid state transition")
+        await state_manager.broadcast_state()
+        return {"state": state_manager.get_state().name}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/errors")
+async def get_errors():
+    return {"errors": state_manager.get_errors()}
