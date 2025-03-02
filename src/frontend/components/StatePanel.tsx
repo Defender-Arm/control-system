@@ -26,10 +26,13 @@ const StatePanel: React.FC<StatePanelProps> = ({ currentState, onStateChange }) 
     const currentNum = stateToNumber[current];
     const nextNum = stateToNumber[next];
 
+    // Prevent user from transitioning CALIBRATE -> READY
+    if (current === "CALIBRATE" && next === "READY") return false;
+
     // Allow decreasing to any lower state
     if (nextNum < currentNum) return true;
 
-    // For increasing, must go in sequence??
+    // For increasing, must go in sequence
     return nextNum === currentNum + 1;
   };
 

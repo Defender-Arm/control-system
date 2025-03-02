@@ -7,6 +7,8 @@ from enum import IntEnum
 from threading import Lock
 from time import time
 
+from pydantic import BaseModel
+
 app = FastAPI()
 
 # Add CORS middleware - allows frontend to connect to backend
@@ -195,6 +197,7 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
+            print(f"Received WebSocket message: {data}")  # Debug logging
             message = json.loads(data)
             if message["type"] == "state_change":
                 new_state = message["state"]
@@ -215,33 +218,58 @@ async def websocket_endpoint(websocket: WebSocket):
                     await state_manager.broadcast_state()
                 else:
                     state_manager.handle_errors()
-    except:
+    except Exception as e:
+        print(f"WebSocket error: {str(e)}")  # Debug logging
         connected_clients.remove(websocket)
 
 @app.get("/api/state")
 async def get_state():
     return {"state": state_manager.get_state().name}
 
-@app.post("/api/state")
-async def set_state(state_data: dict):
-    new_state = state_data["state"]
+class StateResponse(BaseModel):
+    state: str
+
+class StateUpdate(BaseModel):
+    state: str
+
+@app.post("/api/state", response_model=StateResponse)
+async def set_state(state_data: StateUpdate):
+    """
+    Update the system state.
+    
+    - **state**: Target state (OFF, STANDBY, CALIBRATE, READY, ACTIVE)
+    
+    Returns:
+        Current state after attempted transition
+    """
+    try:
+        new_state = state_data.state
+    except KeyError:
+        raise HTTPException(status_code=400, detail="Missing 'state' field")
+    
+    if new_state not in [state.name for state in State]:
+        raise HTTPException(status_code=400, detail=f"Invalid state: {new_state}")
+        
     success = False
     
-    if new_state == "STANDBY":
-        success = state_manager.standby()
-    elif new_state == "CALIBRATE":
-        success = state_manager.calibrate()
-    elif new_state == "READY":
-        success = state_manager.ready()
-    elif new_state == "ACTIVE":
-        success = state_manager.active()
-    elif new_state == "OFF":
-        success = state_manager.stop()
-        
-    if not success:
-        raise HTTPException(status_code=400, detail="Invalid state transition")
-    await state_manager.broadcast_state()
-    return {"state": state_manager.get_state().name}
+    try:
+        if new_state == "STANDBY":
+            success = state_manager.standby()
+        elif new_state == "CALIBRATE":
+            success = state_manager.calibrate()
+        elif new_state == "READY":
+            success = state_manager.ready()
+        elif new_state == "ACTIVE":
+            success = state_manager.active()
+        elif new_state == "OFF":
+            success = state_manager.stop()
+            
+        if not success:
+            raise HTTPException(status_code=400, detail="Invalid state transition")
+        await state_manager.broadcast_state()
+        return {"state": state_manager.get_state().name}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @app.get("/api/errors")
 async def get_errors():
