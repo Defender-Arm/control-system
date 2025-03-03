@@ -4,7 +4,7 @@ from time import monotonic
 from src.backend.error.standby_transition import StandbyTransition
 from src.backend.external_management.connections import Ext
 from src.backend.sensor_fusion.tracking import (
-    find_in_image, create_ray, locate_object, store_location, get_location_history
+    find_in_image, create_ray, locate_object, store_location
 )
 from src.backend.state_management.error_checker import verify_track
 from src.backend.state_management.state_manager import Manager, State
