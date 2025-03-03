@@ -22,19 +22,27 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
             if state_manager.get_state() == State.CALIBRATE:
                 # predefined checks
                 print('Calibrating...')
-                # connection_manager.verify_connection()
+                try:
+                    connection_manager.verify_connection()
+                    _ = connection_manager.take_photos()
+                except StandbyTransition as st:
+                    print(f'{st.message}; Retrying...')
+                    connection_manager.disconnect_cameras()
+                    connection_manager.connect_cameras()
+                    connection_manager.verify_connection()
                 state_manager.ready()
+                print('Success...')
             if state_manager.get_state() > State.CALIBRATE:
                 # monitor tracking
-                # photos = connection_manager.take_photos()
-                # center_l, angle_l = find_in_image(photos[0])
-                # center_r, angle_r = find_in_image(photos[1])
-                # ray_l = create_ray(*center_l)
-                # ray_r = create_ray(*center_r)
-                # vis.set_cam_rays()
-                # location = locate_object(ray_l, ray_r)
-                # store_location(monotonic(), location)
-                # vis.set_obj(location)
+                photos = connection_manager.take_photos()
+                center_l, angle_l = find_in_image(photos[0])
+                center_r, angle_r = find_in_image(photos[1])
+                ray_l = create_ray(*center_l)
+                ray_r = create_ray(*center_r)
+                vis.set_cam_rays(ray_l, ray_r)
+                location = locate_object(ray_l, ray_r)
+                store_location(monotonic(), location)
+                vis.set_obj(location)
                 # verify_track(get_location_history())
                 if state_manager.get_state() == State.ACTIVE:
                     # act upon tracking

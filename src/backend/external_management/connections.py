@@ -6,12 +6,12 @@ from typing import Optional, Tuple
 from src.backend.error.standby_transition import StandbyTransition
 
 
-LEFT_CAM_INDEX = 0
-RIGHT_CAM_INDEX = 1
-LEFT_CAM_OFFSET = (0.4, 0.0, 0.0)  # TODO m from origin
+LEFT_CAM_INDEX = 1
+RIGHT_CAM_INDEX = 2
+LEFT_CAM_OFFSET = (0.2, 0.0, 0.0)  # TODO m from origin
 LEFT_CAM_ANGLES = (0.0, 0.0, 0.0)  # TODO rad from origin
-CAM_FOV = 0.0  # TODO rad
-CAM_RESOLUTION = (0.0, 0.0)  # TODO pixel X * pixel Y
+CAM_FOV = 110.0  # TODO rad
+CAM_RESOLUTION = (1920, 1080)  # TODO pixel X * pixel Y
 
 ARM_BASE_LENGTH = 0.268  # metres
 ARM_FORE_LENGTH = 0.1665
@@ -37,16 +37,16 @@ class Ext:
     def connect_cameras(self):
         """Opens connection to cameras.
         """
-        self._right_cam = cv2.VideoCapture(RIGHT_CAM_INDEX)
         self._left_cam = cv2.VideoCapture(LEFT_CAM_INDEX)
+        self._right_cam = cv2.VideoCapture(RIGHT_CAM_INDEX)
 
     def disconnect_cameras(self):
         """Releases captures.
         """
-        if self._right_cam:
-            self._right_cam.release()
         if self._left_cam:
             self._left_cam.release()
+        if self._right_cam:
+            self._right_cam.release()
 
     def verify_connection(self):
         """Ensures all devices are connected.

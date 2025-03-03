@@ -2,7 +2,9 @@ from tkinter import Tk
 from typing import Tuple
 import numpy as np
 
-from src.backend.external_management.connections import LEFT_CAM_OFFSET
+from src.backend.external_management.connections import LEFT_CAM_ANGLES, LEFT_CAM_OFFSET
+from src.backend.sensor_fusion.tracking import angles_to_vector
+
 
 import ctypes
 try:
@@ -18,6 +20,7 @@ class Graph:
 
     root = None
     canvas = None
+    cams = None
     cam_scatter = None
     obj_scatter = None
     ray_lines = None
@@ -27,22 +30,23 @@ class Graph:
         """
         self.root = root
         self.cam_scatter = scene.visuals.Markers()
-        cams = np.array([LEFT_CAM_OFFSET, (-LEFT_CAM_OFFSET[0], LEFT_CAM_OFFSET[1], LEFT_CAM_OFFSET[2])])
-        self.cam_scatter.set_data(cams, face_color='black', size=5)
+        self.cams = np.array([LEFT_CAM_OFFSET, (-LEFT_CAM_OFFSET[0], LEFT_CAM_OFFSET[1], LEFT_CAM_OFFSET[2])])
+        self.cam_scatter.set_data(pos=self.cams, face_color='black', size=5)
         self.obj_scatter = scene.visuals.Markers()
+        self.ray_lines = [scene.visuals.Line(color='blue', width=2), scene.visuals.Line(color='blue', width=2)]
 
     def set_obj(self, location: Tuple[float, float, float]):
         """Set new location for object in visualisation.
         """
-        self.obj_scatter.set_data(location, face_color='red', size=10)
+        self.obj_scatter.set_data(pos=np.array([location]), face_color='red', size=10)
 
-    def set_cam_rays(self):
-        """Set where cameras see object.
+    def set_cam_rays(self, left_ray_angles: Tuple[float, float], right_ray_angles: Tuple[float, float]):
+        """Set where cameras see object. Rays take xy and yz angles as input.
         """
-        self.ray_lines = [
-            scene.visuals.Line(pos=np.array([[0, 0, 0], [0, 0, 2]]), color='blue', width=2),
-            scene.visuals.Line(pos=np.array([[0, 0, 0], [0, 0, 2]]), color='blue', width=2),
-        ]
+        left_offset = angles_to_vector(left_ray_angles[0] + LEFT_CAM_ANGLES[0], left_ray_angles[1] + LEFT_CAM_ANGLES[1])
+        right_offset = angles_to_vector(right_ray_angles[0] - LEFT_CAM_ANGLES[0], right_ray_angles[1] + LEFT_CAM_ANGLES[1])
+        self.ray_lines[0].set_data(pos=np.array([self.cams[0], self.cams[0] + np.array(left_offset)]))
+        self.ray_lines[1].set_data(pos=np.array([self.cams[1], self.cams[1] + np.array(right_offset)]))
 
     def show(self):
         """Create and show visualisation.
