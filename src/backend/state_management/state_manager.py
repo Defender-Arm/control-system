@@ -12,6 +12,15 @@ class State(IntEnum):
     ACTIVE = 4
 
 
+MANUAL_TRANSITION_DICT = {
+    State.OFF: int('11000', 2),
+    State.STANDBY: int('11100', 2),
+    State.CALIBRATE: int('11100', 2),
+    State.READY: int('10111', 2),
+    State.ACTIVE: int('10011', 2)
+}
+
+
 class Manager:
 
     def __init__(self):
@@ -44,22 +53,22 @@ class Manager:
                 return False
 
     def calibrate(self) -> bool:
-        """If state is standby, advances state to calibrate. Requires lock.
+        """If state is standby or ready, moves state to calibrate. Requires lock.
         :returns: Success
         """
         with self._mutex:
-            if self.get_state() == State.STANDBY:
+            if self.get_state() == State.STANDBY or self.get_state() == State.READY:
                 self._state = State.CALIBRATE
                 return True
             else:
                 return False
 
     def ready(self) -> bool:
-        """If state is calibrate, advances state to ready. Requires lock.
+        """If state is calibrate or active, advances state to ready. Requires lock.
         :returns: Success
         """
         with self._mutex:
-            if self.get_state() == State.CALIBRATE:
+            if self.get_state() == State.CALIBRATE or self.get_state() == State.ACTIVE:
                 self._state = State.READY
                 return True
             else:
