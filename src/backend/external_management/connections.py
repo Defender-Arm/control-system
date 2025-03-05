@@ -52,9 +52,9 @@ class Ext:
         """Ensures all devices are connected.
         :raise StandbyTransition: At least one device is not reachable/connected.
         """
-        if not self._left_cam and self._left_cam.isOpened():
+        if not self._left_cam or not self._left_cam.isOpened():
             raise StandbyTransition(f'Left camera {LEFT_CAM_INDEX} is not open')
-        if not self._right_cam and self._right_cam.isOpened():
+        if not self._right_cam and not self._right_cam.isOpened():
             raise StandbyTransition(f'Right camera {RIGHT_CAM_INDEX} is not open')
 
     def take_photos(self) -> Tuple[ndarray, ndarray]:
