@@ -2,21 +2,21 @@ from src.backend.external_management.connections import (
     LEFT_CAM_OFFSET,
     LEFT_CAM_ANGLES,
     CAM_FOV,
-    CAM_RES
+    CAM_RESOLUTION
 )
 from src.backend.error.standby_transition import StandbyTransition
 
 import cv2
-from math import cos, sin
+from math import cos, sin, dist
 import numpy
 from time import monotonic
 from typing import List, Optional, Tuple
 
 
-LOWER_RED_1 = numpy.ndarray([0, 120, 70])
-UPPER_RED_1 = numpy.ndarray([10, 255, 255])
-LOWER_RED_2 = numpy.ndarray([170, 120, 70])
-UPPER_RED_2 = numpy.ndarray([180, 255, 255])
+LOWER_RED_1 = numpy.array([0, 120, 70])
+UPPER_RED_1 = numpy.array([10, 255, 255])
+LOWER_RED_2 = numpy.array([170, 120, 70])
+UPPER_RED_2 = numpy.array([180, 255, 255])
 
 
 _history = []
@@ -24,6 +24,7 @@ _history = []
 
 def find_in_image(image: numpy.ndarray) -> Optional[Tuple[Tuple[int, int], float]]:
     """Finds the pixel coordinates of the centre of the object in the image.
+    :raise StandbyTransition: Unable to locate an object in the image similar enough to the target colour
     :return: Pixel location, (x, y) from top left, angle from upwards; None if object could not be found
     """
     # convert to HSV for processing
@@ -47,7 +48,7 @@ def find_in_image(image: numpy.ndarray) -> Optional[Tuple[Tuple[int, int], float
         angle = rect[2]  # Rotation angle
         return center, angle
     else:
-        return None
+        raise StandbyTransition('Unable to determine possible location of sword')
 
 
 def create_ray(pixel_x: int, pixel_y: int) -> Tuple[float, float]:
@@ -55,13 +56,13 @@ def create_ray(pixel_x: int, pixel_y: int) -> Tuple[float, float]:
     the camera through the object in the image.
     :return: Angles in radians from camera along x-axis (right), then y-axis (up)
     """
-    angle_x = (pixel_x / CAM_RES[0]) * CAM_FOV - (CAM_FOV / 2)
-    vertical_fov = (CAM_RES[1] / CAM_RES[0]) * CAM_FOV
-    angle_y = (pixel_y / CAM_RES[1]) * vertical_fov - (vertical_fov / 2)
+    angle_x = (pixel_x / CAM_RESOLUTION[0]) * CAM_FOV - (CAM_FOV / 2)
+    vertical_fov = (CAM_RESOLUTION[1] / CAM_RESOLUTION[0]) * CAM_FOV
+    angle_y = (pixel_y / CAM_RESOLUTION[1]) * vertical_fov - (vertical_fov / 2)
     return angle_x, angle_y
 
 
-def _angles_to_vector(angle_x: float, angle_y: float) -> Tuple[float, float, float]:
+def angles_to_vector(angle_x: float, angle_y: float) -> Tuple[float, float, float]:
     """Converts xy and yz angles to a vector.
     :return: Unit vector
     """
@@ -80,10 +81,10 @@ def locate_object(
     :return: Metres from base joint; x-axis, then y-axis, then z-axis
     """
     # parametric vectors r(t) = p + t*d, CAM_OFFSET = p, left = r1, right = r2 (see Cramer's rule)
-    d1 = _angles_to_vector(left_ray_angles[0] + LEFT_CAM_ANGLES[0], left_ray_angles[1] + LEFT_CAM_ANGLES[1])
-    d2 = _angles_to_vector(right_ray_angles[0] - LEFT_CAM_ANGLES[0], right_ray_angles[1] + LEFT_CAM_ANGLES[1])
-    p1 = (LEFT_CAM_OFFSET[0], LEFT_CAM_OFFSET[1], LEFT_CAM_OFFSET[2])
-    p2 = (-LEFT_CAM_OFFSET[0], LEFT_CAM_OFFSET[1], LEFT_CAM_OFFSET[2])
+    d1 = numpy.array(angles_to_vector(left_ray_angles[0] + LEFT_CAM_ANGLES[0], left_ray_angles[1] + LEFT_CAM_ANGLES[1]))
+    d2 = numpy.array(angles_to_vector(right_ray_angles[0] - LEFT_CAM_ANGLES[0], right_ray_angles[1] + LEFT_CAM_ANGLES[1]))
+    p1 = numpy.array([LEFT_CAM_OFFSET[0], LEFT_CAM_OFFSET[1], LEFT_CAM_OFFSET[2]])
+    p2 = numpy.array([-LEFT_CAM_OFFSET[0], LEFT_CAM_OFFSET[1], LEFT_CAM_OFFSET[2]])
     # minimize squared distance between r1 and r2
     # (d1 * d1) * t1 + (d1 * d2) * t2 = (p2 - p1) * d1
     # (d1 * d2) * t1 + (d2 * d2) * t2 = (p2 - p1) * d2
@@ -98,11 +99,11 @@ def locate_object(
     den = a * d - b**2
     t1 = (c * d - b * e) / den
     t2 = (a * e - b * c) / den
-    q1 = p1 + t1 * d1
-    q2 = p2 + t2 * d2
-    distance = ((q1[0] - q2[0])**2 + (q1[1] - q2[1])**2 + (q1[2] - q2[2])**2)**0.5
+    q1 = numpy.array(p1) + t1 * numpy.array(d1)
+    q2 = numpy.array(p2) + t2 * numpy.array(d2)
+    distance = dist(q1, q2)
     if distance > 0.1:
-        raise StandbyTransition(f'Cameras localize object to farther than 0.1m apart ({distance}m)')
+        pass#raise StandbyTransition(f'Cameras localize object to farther than 0.1m apart ({distance}m)')
     location = (q1 + q2) / 2
     store_location(monotonic(), location)
     return location

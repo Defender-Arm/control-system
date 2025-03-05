@@ -30,7 +30,7 @@ def find_red_stick_center_orientation(image):
         # Fit a rotated rectangle
         rect = cv2.minAreaRect(largest_contour)
         box = cv2.boxPoints(rect)
-        box = np.int0(box)  # Convert to integer
+        box = box.astype(int)  # Convert to integer
 
         # Extract center and orientation
         center = (int(rect[0][0]), int(rect[0][1]))  # x, y
