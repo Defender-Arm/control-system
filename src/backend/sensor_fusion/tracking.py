@@ -7,7 +7,7 @@ from src.backend.external_management.connections import (
 from src.backend.error.standby_transition import StandbyTransition
 
 import cv2
-from math import cos, sin
+from math import cos, sin, dist
 import numpy
 from time import monotonic
 from typing import List, Optional, Tuple
@@ -101,7 +101,7 @@ def locate_object(
     t2 = (a * e - b * c) / den
     q1 = numpy.array(p1) + t1 * numpy.array(d1)
     q2 = numpy.array(p2) + t2 * numpy.array(d2)
-    distance = ((q1[0] - q2[0])**2 + (q1[1] - q2[1])**2 + (q1[2] - q2[2])**2)**0.5
+    distance = dist(q1, q2)
     if distance > 0.1:
         pass#raise StandbyTransition(f'Cameras localize object to farther than 0.1m apart ({distance}m)')
     location = (q1 + q2) / 2

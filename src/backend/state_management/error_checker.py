@@ -1,3 +1,4 @@
+from math import dist
 from typing import List, Tuple
 
 from src.backend.error.standby_transition import StandbyTransition
@@ -33,11 +34,7 @@ def _verify_location(locations: List[Tuple[float, float, float]]) -> None:
     :raise StandbyTransition: Locations are too far apart in space
     """
     for i in range(len(locations) - 1):
-        distance = (
-               (locations[i][0] - locations[i+1][0])**2 +
-               (locations[i][1] - locations[i+1][1])**2 +
-               (locations[i][2] - locations[i+1][2])**2
-        ) ** 0.5
+        distance = dist(locations[i], locations[i+1])
         if distance > MAX_DIST:
             raise StandbyTransition(f'Locations at past timesteps {i} and {i+1} are too far apart ({distance}m)')
 
