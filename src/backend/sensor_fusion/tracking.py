@@ -104,7 +104,7 @@ def locate_object(
     distance = ((q1[0] - q2[0])**2 + (q1[1] - q2[1])**2 + (q1[2] - q2[2])**2)**0.5
     if distance > 0.1:
         pass#raise StandbyTransition(f'Cameras localize object to farther than 0.1m apart ({distance}m)')
-    location = tuple([float(n) for n in (q1 + q2) / 2])
+    location = (q1 + q2) / 2
     store_location(monotonic(), location)
     return location
 
