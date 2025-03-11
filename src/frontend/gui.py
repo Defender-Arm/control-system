@@ -63,13 +63,10 @@ class Gui:
             btn.config(state=tk.NORMAL if condition else tk.DISABLED, background='#fff' if condition else '#ddd')
             btn.config(borderwidth=4 if i == state else 1, highlightbackground='#dd6' if i == state else '#fff')
 
-    def set_logs(self, logs: List[str]):
-        """Add an entry to the log and highlight briefly"""
-        if len(logs) == 0:
-            return
-        self.log_list.delete(0, tk.END)
-        for line in logs:
-            self.log_list.insert(tk.END, line)
+    def add_log(self, log: str):
+        """Add an entry to the log and highlight briefly.
+        """
+        self.log_list.insert(0, log)
         self.log_list.itemconfig(0, {'bg': 'yellow'})
         self.root.after(1000, self.clear_log_highlight)
 
