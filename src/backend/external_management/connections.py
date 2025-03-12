@@ -7,8 +7,8 @@ from typing import Optional, Tuple
 from src.backend.error.standby_transition import StandbyTransition
 
 
-LEFT_CAM_INDEX = 2
-RIGHT_CAM_INDEX = 1
+LEFT_CAM_INDEX = 1
+RIGHT_CAM_INDEX = 2
 LEFT_CAM_OFFSET = (0.3, 0.0, 0.0)  # TODO m from origin
 LEFT_CAM_ANGLES = (pi/8, pi/8)  # TODO rad from origin
 CAM_FOV = 110.0 * 2*pi / 360
