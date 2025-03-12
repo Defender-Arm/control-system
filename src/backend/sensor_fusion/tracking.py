@@ -75,7 +75,7 @@ def angles_to_vector(angle_x: float, angle_y: float) -> Tuple[float, float, floa
 def locate_object(
         left_ray_angles: Tuple[float, float],
         right_ray_angles: Tuple[float, float]
-) -> Tuple[float, float, float]:
+) -> numpy.typing.NDArray[numpy.float64]:
     """Finds where two rays intersect or are the closest to intercepting.
     :raise StandbyTransition: Rays do not intersect and shortest distance between them is greater than 0.1 metre
     :return: Metres from base joint; x-axis, then y-axis, then z-axis
@@ -98,7 +98,7 @@ def locate_object(
     e = (-2 * p1[0]) * d2[0] + 0 + 0
     den = a * d - b**2
     t1 = (c * d - b * e) / den
-    t2 = (a * e - b * c) / den
+    t2 = -(a * e - b * c) / den
     q1 = numpy.array(p1) + t1 * numpy.array(d1)
     q2 = numpy.array(p2) + t2 * numpy.array(d2)
     distance = dist(q1, q2)
@@ -109,7 +109,7 @@ def locate_object(
     return location
 
 
-def store_location(timestamp: float, location: Tuple[float, float, float]) -> None:
+def store_location(timestamp: float, location: numpy.typing.NDArray[numpy.float64]) -> None:
     """Adds the location at its timestamp to the stored history. Stores most recent 15 entries.
     """
     if len(_history) == 15:
