@@ -1,8 +1,7 @@
 from src.backend.external_management.connections import (
     LEFT_CAM_OFFSET,
     LEFT_CAM_ANGLES,
-    CAM_FOV,
-    CAM_RESOLUTION
+    CAM_FOV
 )
 from src.backend.error.standby_transition import StandbyTransition
 
@@ -51,14 +50,14 @@ def find_in_image(image: numpy.ndarray) -> Optional[Tuple[Tuple[int, int], float
         raise StandbyTransition('Unable to determine possible location of sword')
 
 
-def create_ray(pixel_x: int, pixel_y: int) -> Tuple[float, float]:
+def create_ray(pixel_x: int, pixel_y: int, res: Tuple) -> Tuple[float, float]:
     """Calculates angles for line in real space which passes from the center of
     the camera through the object in the image.
     :return: Angles in radians from camera along x-axis (right), then y-axis (up)
     """
-    angle_x = (pixel_x / CAM_RESOLUTION[0]) * CAM_FOV - (CAM_FOV / 2)
-    vertical_fov = (CAM_RESOLUTION[1] / CAM_RESOLUTION[0]) * CAM_FOV
-    angle_y = (pixel_y / CAM_RESOLUTION[1]) * vertical_fov - (vertical_fov / 2)
+    angle_x = (pixel_x / res[0]) * CAM_FOV - (CAM_FOV / 2)
+    vertical_fov = (res[1] / res[0]) * CAM_FOV
+    angle_y = (pixel_y / res[1]) * vertical_fov - (vertical_fov / 2)
     return angle_x, angle_y
 
 

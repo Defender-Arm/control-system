@@ -53,8 +53,8 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                 photos = connection_manager.take_photos()
                 center_l, angle_l = find_in_image(photos[0])
                 center_r, angle_r = find_in_image(photos[1])
-                ray_l = create_ray(*center_l)
-                ray_r = create_ray(*center_r)
+                ray_l = create_ray(*center_l, connection_manager.cam_res)
+                ray_r = create_ray(*center_r, connection_manager.cam_res)
                 vis.set_cam_rays(ray_l, ray_r)
                 location = locate_object(ray_l, ray_r)
                 store_location(monotonic(), location)
@@ -74,8 +74,11 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
             gui.set_state(current_state)
             post_msg(f'State transition to {current_state.name}', gui, False)
 
-    gui.set_state(State.OFF)
+    if gui.root.winfo_exists():
+        gui.set_state(State.OFF)
     print('Cleaning up...')
     # cleanup
     connection_manager.disconnect_cameras()
+    if gui.root.winfo_exists():
+        gui.root.quit()
     print('Operation loop complete')

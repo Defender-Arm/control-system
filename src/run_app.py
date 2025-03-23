@@ -17,9 +17,11 @@ if __name__ == '__main__':
     gui = Gui(root, state_manager, vis)
     gui.set_state(state_manager.get_state())
     # start processing thread
-    operation_thread = Thread(target=operation_loop, args=(state_manager, connection_manager, gui, vis), daemon=True)
+    operation_thread = Thread(target=operation_loop, args=(state_manager, connection_manager, gui, vis))
     operation_thread.start()
     # start GUI thread
     root.mainloop()
     # trigger operation_thread cleanup if GUI closes first
     state_manager.stop()
+    operation_thread.join()
+    print('FINISHED')

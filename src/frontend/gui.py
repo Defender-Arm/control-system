@@ -24,6 +24,7 @@ class Gui:
     def __init__(self, root, state_manager: Manager, vis: Graph):
         self.root = root
         self.root.title("Arm Control")
+        self.root.geometry("1200x400")
         self.state_manager = state_manager
         self.vis = vis
         # left column; control
@@ -50,14 +51,12 @@ class Gui:
         # right column; logs
         log_frame = tk.Frame(root)
         log_frame.grid(row=0, column=1, padx=10, pady=10, rowspan=2)
-        self.log_list = tk.Listbox(log_frame, width=40, height=15)
+        self.log_list = tk.Listbox(log_frame, width=80, height=15)
         self.log_list.pack()
 
     def set_state(self, state: State):
         """Update the active state and disable buttons for invalid transitions.
         """
-        if state is State.OFF:
-            self.root.destroy()
         for i, btn in enumerate(self.buttons):
             condition = MANUAL_TRANSITION_DICT[state] & (int('10000', 2) >> i)
             btn.config(state=tk.NORMAL if condition else tk.DISABLED, background='#fff' if condition else '#ddd')
@@ -81,7 +80,7 @@ class Gui:
         """
         instructions_window = tk.Toplevel(self.root)
         instructions_window.title("Instructions")
-        instructions_window.geometry("400x200")  # Set window size
+        instructions_window.geometry("400x200")
         label = tk.Label(instructions_window, text=INSTRUCTIONS, font=("Arial", 10), wraplength=350, justify='center')
         label.pack(pady=10)
         close_button = tk.Button(instructions_window, text="Close", command=instructions_window.destroy)
