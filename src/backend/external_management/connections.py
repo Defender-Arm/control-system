@@ -1,6 +1,7 @@
 import cv2
 from enum import IntEnum
 from numpy import ndarray
+import serial
 from typing import Optional, Tuple
 
 from src.backend.error.standby_transition import StandbyTransition
@@ -12,6 +13,7 @@ LEFT_CAM_OFFSET = (0.2, 0.0, 0.0)  # TODO m from origin
 LEFT_CAM_ANGLES = (0.0, 0.0, 0.0)  # TODO rad from origin
 CAM_FOV = 110.0  # TODO rad
 CAM_RESOLUTION = (1920, 1080)  # TODO pixel X * pixel Y
+SERIAL_PORT = 'COM4'
 
 ARM_BASE_LENGTH = 0.268  # metres
 ARM_FORE_LENGTH = 0.1665
@@ -32,7 +34,9 @@ class Ext:
         """
         self._right_cam = None
         self._left_cam = None
+        self._arduino = None
         self.connect_cameras()
+        self.connect_motor_control()
 
     def connect_cameras(self):
         """Opens connection to cameras.
@@ -47,6 +51,20 @@ class Ext:
             self._left_cam.release()
         if self._right_cam:
             self._right_cam.release()
+
+    def connect_motor_control(self):
+        """Opens connection to motor control.
+        """
+        if not self._arduino:
+            self._arduino = serial.Serial(SERIAL_PORT, 9600, timeout=1)
+        if not self._arduino.is_open:
+            self._arduino.open()
+
+    def disconnect_motor_control(self):
+        """Closes connection to motor control.
+        """
+        if self._arduino and self._arduino.is_open:
+            self._arduino.close()
 
     def verify_connection(self):
         """Ensures all devices are connected.
@@ -75,10 +93,12 @@ class Ext:
         """
         raise NotImplementedError
 
-    def move_joint(self) -> None:
-        """Changes angle of specified joint by specified value.
+    def set_joint_targets(self, angles: Tuple[float, float, float]) -> None:
+        """Changes target angle of 3 joints to given angles in radians.
         """
-        raise NotImplementedError
+        command = f'{angles[0]} {angles[1]} {angles[2]}\n'
+        print(command.strip(), self._arduino.is_open)
+        self._arduino.write(command.encode('utf-8'))
 
 
 def arm_angles_to_position(base: float, elbow: float, wrist: float) -> Tuple[float, float, float]:
