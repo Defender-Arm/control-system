@@ -106,10 +106,3 @@ class Ext:
         command = f'{angles[0]} {angles[1]} {angles[2]}\n'
         print(command.strip(), self._arduino.is_open)
         self._arduino.write(command.encode('utf-8'))
-
-
-def arm_angles_to_position(base: float, elbow: float, wrist: float) -> Tuple[float, float, float]:
-    """Converts angles of arm to a position in space relative to the base.
-    :return: Distances in metres to right, then to front, then to above base joint
-    """
-    raise NotImplementedError
