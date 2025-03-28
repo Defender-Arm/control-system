@@ -2,6 +2,7 @@ import cv2
 from enum import IntEnum
 from math import pi
 from numpy import ndarray
+import serial
 from typing import Optional, Tuple
 
 from src.backend.error.standby_transition import StandbyTransition
@@ -12,6 +13,7 @@ RIGHT_CAM_INDEX = 2
 LEFT_CAM_OFFSET = (0.3, 0.0, 0.0)  # TODO m from origin
 LEFT_CAM_ANGLES = (0, pi/8)  # TODO rad from origin
 CAM_FOV = 110.0 * 2*pi / 360
+SERIAL_PORT = 'COM4'
 
 ARM_BASE_LENGTH = 0.268  # metres
 ARM_FORE_LENGTH = 0.1665
@@ -33,7 +35,9 @@ class Ext:
         self._right_cam = None
         self._left_cam = None
         self.cam_res = [0, 0]
+        self._arduino = None
         self.connect_cameras()
+        self.connect_motor_control()
 
     def connect_cameras(self):
         """Opens connection to cameras.
@@ -55,13 +59,27 @@ class Ext:
         if self._right_cam:
             self._right_cam.release()
 
+    def connect_motor_control(self):
+        """Opens connection to motor control.
+        """
+        if not self._arduino:
+            self._arduino = serial.Serial(SERIAL_PORT, 9600, timeout=1)
+        if not self._arduino.is_open:
+            self._arduino.open()
+
+    def disconnect_motor_control(self):
+        """Closes connection to motor control.
+        """
+        if self._arduino and self._arduino.is_open:
+            self._arduino.close()
+
     def verify_connection(self):
         """Ensures all devices are connected.
         :raise StandbyTransition: At least one device is not reachable/connected.
         """
         if not self._left_cam or not self._left_cam.isOpened():
             raise StandbyTransition(f'Left camera {LEFT_CAM_INDEX} is not open')
-        if not self._right_cam and not self._right_cam.isOpened():
+        if not self._right_cam or not self._right_cam.isOpened():
             raise StandbyTransition(f'Right camera {RIGHT_CAM_INDEX} is not open')
 
     def take_photos(self) -> Tuple[ndarray, ndarray]:
@@ -82,10 +100,12 @@ class Ext:
         """
         raise NotImplementedError
 
-    def move_joint(self) -> None:
-        """Changes angle of specified joint by specified value.
+    def set_joint_targets(self, angles: Tuple[float, float, float]) -> None:
+        """Changes target angle of 3 joints to given angles in radians.
         """
-        raise NotImplementedError
+        command = f'{angles[0]} {angles[1]} {angles[2]}\n'
+        print(command.strip(), self._arduino.is_open)
+        self._arduino.write(command.encode('utf-8'))
 
 
 def arm_angles_to_position(base: float, elbow: float, wrist: float) -> Tuple[float, float, float]:

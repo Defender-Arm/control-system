@@ -2,3 +2,4 @@ numpy
 opencv-python
 vispy
 PyQt6
+pyserial
