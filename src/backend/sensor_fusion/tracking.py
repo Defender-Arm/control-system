@@ -57,7 +57,7 @@ def create_ray(pixel_x: int, pixel_y: int, res: Tuple) -> Tuple[float, float]:
     """
     angle_x = (pixel_x / res[0]) * CAM_FOV - (CAM_FOV / 2)
     vertical_fov = (res[1] / res[0]) * CAM_FOV
-    angle_y = (pixel_y / res[1]) * vertical_fov - (vertical_fov / 2)
+    angle_y = -((pixel_y / res[1]) * vertical_fov - (vertical_fov / 2))
     return angle_x, angle_y
 
 
