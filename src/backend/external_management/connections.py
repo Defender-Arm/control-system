@@ -1,5 +1,6 @@
 import cv2
 from enum import IntEnum
+from math import pi
 from numpy import ndarray
 import serial
 from typing import Optional, Tuple
@@ -9,10 +10,9 @@ from src.backend.error.standby_transition import StandbyTransition
 
 LEFT_CAM_INDEX = 1
 RIGHT_CAM_INDEX = 2
-LEFT_CAM_OFFSET = (0.2, 0.0, 0.0)  # TODO m from origin
-LEFT_CAM_ANGLES = (0.0, 0.0, 0.0)  # TODO rad from origin
-CAM_FOV = 110.0  # TODO rad
-CAM_RESOLUTION = (1920, 1080)  # TODO pixel X * pixel Y
+LEFT_CAM_OFFSET = (0.3, 0.0, 0.0)  # TODO m from origin
+LEFT_CAM_ANGLES = (0, pi/8)  # TODO rad from origin
+CAM_FOV = 110.0 * 2*pi / 360
 SERIAL_PORT = 'COM4'
 
 ARM_BASE_LENGTH = 0.268  # metres
@@ -34,6 +34,7 @@ class Ext:
         """
         self._right_cam = None
         self._left_cam = None
+        self.cam_res = [0, 0]
         self._arduino = None
         self.connect_cameras()
         self.connect_motor_control()
@@ -41,8 +42,14 @@ class Ext:
     def connect_cameras(self):
         """Opens connection to cameras.
         """
-        self._left_cam = cv2.VideoCapture(LEFT_CAM_INDEX)
-        self._right_cam = cv2.VideoCapture(RIGHT_CAM_INDEX)
+        self._left_cam = cv2.VideoCapture(LEFT_CAM_INDEX, cv2.CAP_DSHOW)
+        self._left_cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+        self._left_cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+        self._right_cam = cv2.VideoCapture(RIGHT_CAM_INDEX, cv2.CAP_DSHOW)
+        self._right_cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
+        self._right_cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
+        self.cam_res = (self._left_cam.get(cv2.CAP_PROP_FRAME_WIDTH),
+                        self._left_cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     def disconnect_cameras(self):
         """Releases captures.

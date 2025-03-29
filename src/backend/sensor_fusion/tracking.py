@@ -1,8 +1,7 @@
 from src.backend.external_management.connections import (
     LEFT_CAM_OFFSET,
     LEFT_CAM_ANGLES,
-    CAM_FOV,
-    CAM_RESOLUTION
+    CAM_FOV
 )
 from src.backend.error.standby_transition import StandbyTransition
 
@@ -51,14 +50,14 @@ def find_in_image(image: numpy.ndarray) -> Optional[Tuple[Tuple[int, int], float
         raise StandbyTransition('Unable to determine possible location of sword')
 
 
-def create_ray(pixel_x: int, pixel_y: int) -> Tuple[float, float]:
+def create_ray(pixel_x: int, pixel_y: int, res: Tuple) -> Tuple[float, float]:
     """Calculates angles for line in real space which passes from the center of
     the camera through the object in the image.
     :return: Angles in radians from camera along x-axis (right), then y-axis (up)
     """
-    angle_x = (pixel_x / CAM_RESOLUTION[0]) * CAM_FOV - (CAM_FOV / 2)
-    vertical_fov = (CAM_RESOLUTION[1] / CAM_RESOLUTION[0]) * CAM_FOV
-    angle_y = (pixel_y / CAM_RESOLUTION[1]) * vertical_fov - (vertical_fov / 2)
+    angle_x = (pixel_x / res[0]) * CAM_FOV - (CAM_FOV / 2)
+    vertical_fov = (res[1] / res[0]) * CAM_FOV
+    angle_y = -((pixel_y / res[1]) * vertical_fov - (vertical_fov / 2))
     return angle_x, angle_y
 
 
@@ -75,7 +74,7 @@ def angles_to_vector(angle_x: float, angle_y: float) -> Tuple[float, float, floa
 def locate_object(
         left_ray_angles: Tuple[float, float],
         right_ray_angles: Tuple[float, float]
-) -> Tuple[float, float, float]:
+) -> numpy.typing.NDArray[numpy.float64]:
     """Finds where two rays intersect or are the closest to intercepting.
     :raise StandbyTransition: Rays do not intersect and shortest distance between them is greater than 0.1 metre
     :return: Metres from base joint; x-axis, then y-axis, then z-axis
@@ -98,7 +97,7 @@ def locate_object(
     e = (-2 * p1[0]) * d2[0] + 0 + 0
     den = a * d - b**2
     t1 = (c * d - b * e) / den
-    t2 = (a * e - b * c) / den
+    t2 = -(a * e - b * c) / den
     q1 = numpy.array(p1) + t1 * numpy.array(d1)
     q2 = numpy.array(p2) + t2 * numpy.array(d2)
     distance = dist(q1, q2)
@@ -109,7 +108,7 @@ def locate_object(
     return location
 
 
-def store_location(timestamp: float, location: Tuple[float, float, float]) -> None:
+def store_location(timestamp: float, location: numpy.typing.NDArray[numpy.float64]) -> None:
     """Adds the location at its timestamp to the stored history. Stores most recent 15 entries.
     """
     if len(_history) == 15:
