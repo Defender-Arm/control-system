@@ -35,7 +35,7 @@ class Graph:
         self.obj_scatter = scene.visuals.Markers()
         self.ray_lines = [scene.visuals.Line(color='blue', width=2), scene.visuals.Line(color='blue', width=2)]
 
-    def set_obj(self, location: Tuple[float, float, float]):
+    def set_obj(self, location: np.typing.NDArray[np.float64]):
         """Set new location for object in visualisation.
         """
         self.obj_scatter.set_data(pos=np.array([location]), face_color='red', size=10)
@@ -43,8 +43,14 @@ class Graph:
     def set_cam_rays(self, left_ray_angles: Tuple[float, float], right_ray_angles: Tuple[float, float]):
         """Set where cameras see object. Rays take xy and yz angles as input.
         """
-        left_offset = angles_to_vector(left_ray_angles[0] + LEFT_CAM_ANGLES[0], left_ray_angles[1] + LEFT_CAM_ANGLES[1])
-        right_offset = angles_to_vector(right_ray_angles[0] - LEFT_CAM_ANGLES[0], right_ray_angles[1] + LEFT_CAM_ANGLES[1])
+        left_offset = angles_to_vector(
+            left_ray_angles[0] + LEFT_CAM_ANGLES[0],
+            left_ray_angles[1] + LEFT_CAM_ANGLES[1]
+        )
+        right_offset = angles_to_vector(
+            right_ray_angles[0] - LEFT_CAM_ANGLES[0],
+            right_ray_angles[1] + LEFT_CAM_ANGLES[1]
+        )
         self.ray_lines[0].set_data(pos=np.array([self.cams[0], self.cams[0] + np.array(left_offset)]))
         self.ray_lines[1].set_data(pos=np.array([self.cams[1], self.cams[1] + np.array(right_offset)]))
 
@@ -78,4 +84,3 @@ class Graph:
         if self.canvas:
             self.canvas.app.process_events()
         self.root.after(10, self.update)
-
