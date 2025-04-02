@@ -4,10 +4,11 @@ from time import monotonic
 from src.backend.error.standby_transition import StandbyTransition
 from src.backend.external_management.connections import Ext
 from src.backend.sensor_fusion.tracking import (
-    find_in_image, create_ray, locate_object, store_location
+    find_in_image, create_ray, locate_object, store_location, get_location_history
 )
 from src.backend.state_management.error_checker import verify_track
 from src.backend.state_management.state_manager import Manager, State
+from src.backend.arm_control.kinematics import pos_to_arm_angles, R_TO_D
 from src.frontend.gui import Gui
 from src.frontend.visualisation import Graph
 
@@ -31,6 +32,9 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
     # setup instances
     print('Preparing managers...')
     last_state = None
+    log_file = open('run_app.log', 'w')
+    last = 0
+    last_ang = [999, 999, 999]
 
     # start main loop
     print('Starting')
@@ -59,10 +63,42 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                 location = locate_object(ray_l, ray_r)
                 store_location(monotonic(), location)
                 vis.set_obj(location)
-                # verify_track(get_location_history())
+                verify_track(get_location_history())
                 if state_manager.get_state() == State.ACTIVE:
                     # act upon tracking
-                    pass
+                    arm_angles = pos_to_arm_angles(*location)
+                    arm_angles = [angle*R_TO_D for angle in arm_angles]
+                    if arm_angles[0] < -60:
+                        print(f'arm_angles[0] increased from {arm_angles[0]} to -60')
+                        arm_angles[0] = -60
+                    if arm_angles[0] > 60:
+                        print(f'arm_angles[0] decreased from {arm_angles[0]} to 60')
+                        arm_angles[0] = 60
+                    if arm_angles[1] < -45:
+                        print(f'arm_angles[1] increased from {arm_angles[1]} to -45')
+                        arm_angles[1] = -45
+                    if arm_angles[1] > 45:
+                        print(f'arm_angles[1] decreased from {arm_angles[1]} to 45')
+                        arm_angles[1] = 45
+                    if abs(arm_angles[2]) > 180:
+                        print(f'arm_angles[2] changed from {arm_angles[2]} to 180')
+                        arm_angles[2] = 180
+                    if last + 0.2 < monotonic():
+                        if (
+                                abs(last_ang[0] - arm_angles[0]) > 5 or
+                                abs(last_ang[1] - arm_angles[1]) > 5 or
+                                abs(last_ang[2] - arm_angles[2]) > 5
+                        ):
+                            print(f'target is {int(arm_angles[0])} {int(arm_angles[1])} {int(arm_angles[2])}')
+                            last = monotonic()
+                            last_ang = arm_angles
+                            log_file.write(f'o {int(arm_angles[0])} {int(arm_angles[1])} {int(arm_angles[2])}\n')
+                        else:
+                            last = monotonic()
+                            print(f'RESEND target is {int(last_ang[0])} {-int(last_ang[1])} {int(last_ang[2])}')
+                            log_file.write(f'r {int(last_ang[0])} {int(last_ang[1])} {int(last_ang[2])}\n')
+                    else:
+                        log_file.write(f'x {int(arm_angles[0])} {int(arm_angles[1])} {int(arm_angles[2])}\n')
         except StandbyTransition as st:
             # handle error
             post_msg(st.message, gui, True)
@@ -81,4 +117,5 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
     connection_manager.disconnect_cameras()
     if gui.root.winfo_exists():
         gui.root.quit()
+    log_file.close()
     print('Operation loop complete')
