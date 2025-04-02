@@ -3,7 +3,7 @@ from math import cos, atan, pi
 
 
 D_TO_R = 2*pi/360
-R_TO_D = 360/2*pi
+R_TO_D = 360/(2*pi)
 
 
 def arm_angles_to_position(base: float, elbow: float, wrist: float) -> Tuple[float, float, float]:
