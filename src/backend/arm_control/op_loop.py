@@ -4,10 +4,11 @@ from time import monotonic
 from src.backend.error.standby_transition import StandbyTransition
 from src.backend.external_management.connections import Ext
 from src.backend.sensor_fusion.tracking import (
-    find_in_image, create_ray, locate_object, store_location, get_location_history
+    find_in_image, create_ray, locate_object, store_location, get_location_history, clear_location_history
 )
 from src.backend.state_management.error_checker import verify_track
 from src.backend.state_management.state_manager import Manager, State
+from src.backend.arm_control.trajectory import simple_trajectory
 from src.backend.arm_control.kinematics import pos_to_arm_angles, R_TO_D
 from src.frontend.gui import Gui
 from src.frontend.visualisation import Graph
@@ -76,6 +77,7 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                 else:
                     # ensure it can find object
                     distance = 0
+                    clear_location_history()
                     for i in range(5):
                         photos = connection_manager.take_photos()
                         center_l, angle_l = find_in_image(photos[0])
@@ -97,6 +99,8 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                     connection_manager.recv_serial()
                     state_manager.ready()
                     connection_manager.send_serial(State.READY)
+                    last_ang = [999, 999, 999]
+                    clear_location_history()
                     post_msg('Calibration successful', gui, False)
             elif state_manager.get_state() > State.CALIBRATE:
                 # monitor tracking
@@ -115,7 +119,7 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                     connection_manager.send_serial(State.READY)
                 if state_manager.get_state() == State.ACTIVE:
                     # act upon tracking
-                    arm_angles = pos_to_arm_angles(*location)
+                    arm_angles = pos_to_arm_angles(*simple_trajectory(location))
                     # limit to bounds
                     arm_angles = [
                         limit_joint_to_range(arm_angles[0]*R_TO_D, -60, 60),

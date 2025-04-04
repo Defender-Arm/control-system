@@ -128,3 +128,10 @@ def get_location_history() -> List[Tuple[float, Tuple[float, float, float]]]:
     :return: list of timestamp and (x,y,z) metre coordinate sets
     """
     return _history
+
+
+def clear_location_history() -> None:
+    """Removes all past locations stored.
+    """
+    global _history
+    _history = []
