@@ -28,6 +28,20 @@ def format_log(msg: str, is_error: bool = False) -> str:
     return f'{datetime.now().time()} {"!!" if is_error else "--"} {msg}'
 
 
+def limit_joint_to_range(value: int, lower: int, upper: int, joint: str = 'joint', verbose: bool = False) -> int:
+    """Limits a command for a given joint to a specified range.
+    :return: The original value if it is within the range, otherwise the closest limit value
+    """
+    if value < lower:
+        if verbose:
+            print(f'{joint} increased from {value} to {lower}')
+        return lower
+    elif value > upper:
+        print(f'{joint} decreased from {value} to {upper}')
+        return upper
+    return value
+
+
 def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vis: Graph):
     # setup instances
     print('Preparing managers...')
@@ -101,23 +115,12 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                 if state_manager.get_state() == State.ACTIVE:
                     # act upon tracking
                     arm_angles = pos_to_arm_angles(*location)
-                    arm_angles = [int(angle*R_TO_D) for angle in arm_angles]
                     # limit to bounds
-                    if arm_angles[0] < -60:
-                        print(f'arm_angles[0] increased from {arm_angles[0]} to -60')
-                        arm_angles[0] = -60
-                    if arm_angles[0] > 60:
-                        print(f'arm_angles[0] decreased from {arm_angles[0]} to 60')
-                        arm_angles[0] = 60
-                    if arm_angles[1] < -45:
-                        print(f'arm_angles[1] increased from {arm_angles[1]} to -45')
-                        arm_angles[1] = -45
-                    if arm_angles[1] > 45:
-                        print(f'arm_angles[1] decreased from {arm_angles[1]} to 45')
-                        arm_angles[1] = 45
-                    if abs(arm_angles[2]) > 180:
-                        print(f'arm_angles[2] changed from {arm_angles[2]} to 180')
-                        arm_angles[2] = 180
+                    arm_angles = [
+                        limit_joint_to_range(arm_angles[0]*R_TO_D, -60, 60),
+                        limit_joint_to_range(arm_angles[1]*R_TO_D, -35, 55),
+                        limit_joint_to_range(arm_angles[2]*R_TO_D, -180, 180),
+                    ]
                     # reduce small movements by resending
                     if (
                             abs(last_ang[0] - arm_angles[0]) > 5 or
