@@ -48,7 +48,7 @@ class Gui:
         instructions_button.grid(row=2, column=0, pady=10)
         # right column; logs
         log_frame = tk.Frame(root)
-        log_frame.grid(row=0, column=1, padx=10, pady=10, rowspan=2)
+        log_frame.grid(row=0, column=1, padx=10, pady=10, rowspan=3)
         self.log_list = tk.Listbox(log_frame, width=80, height=15)
         self.log_list.pack()
 
