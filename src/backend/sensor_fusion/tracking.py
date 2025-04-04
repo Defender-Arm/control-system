@@ -80,8 +80,14 @@ def locate_object(
     :return: Metres from base joint; x-axis, then y-axis, then z-axis
     """
     # parametric vectors r(t) = p + t*d, CAM_OFFSET = p, left = r1, right = r2 (see Cramer's rule)
-    d1 = numpy.array(angles_to_vector(left_ray_angles[0] + LEFT_CAM_ANGLES[0], left_ray_angles[1] + LEFT_CAM_ANGLES[1]))
-    d2 = numpy.array(angles_to_vector(right_ray_angles[0] - LEFT_CAM_ANGLES[0], right_ray_angles[1] + LEFT_CAM_ANGLES[1]))
+    d1 = numpy.array(angles_to_vector(
+            left_ray_angles[0] + LEFT_CAM_ANGLES[0],
+            left_ray_angles[1] + LEFT_CAM_ANGLES[1]
+    ))
+    d2 = numpy.array(angles_to_vector(
+            right_ray_angles[0] - LEFT_CAM_ANGLES[0],
+            right_ray_angles[1] + LEFT_CAM_ANGLES[1]
+    ))
     p1 = numpy.array([LEFT_CAM_OFFSET[0], LEFT_CAM_OFFSET[1], LEFT_CAM_OFFSET[2]])
     p2 = numpy.array([-LEFT_CAM_OFFSET[0], LEFT_CAM_OFFSET[1], LEFT_CAM_OFFSET[2]])
     # minimize squared distance between r1 and r2

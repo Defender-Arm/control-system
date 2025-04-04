@@ -1,5 +1,4 @@
 import tkinter as tk
-from typing import List
 
 from src.backend.state_management.state_manager import (
     Manager, MANUAL_TRANSITION_DICT, State
@@ -7,9 +6,8 @@ from src.backend.state_management.state_manager import (
 from src.frontend.visualisation import Graph
 
 
-INSTRUCTIONS = ('Hello'
-                'its me and its ho it work yes mmmmm one two thrre four five six ecsven eight '
-                'nine ten eleven twelve thirteen frtoureen fifcteen')
+INSTRUCTIONS = ('PLACEHOLDER'
+                'TEXT')
 
 
 class Gui:

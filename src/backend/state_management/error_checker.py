@@ -25,8 +25,7 @@ def _verify_time(timestamps: List[float]) -> None:
     for i in range(len(timestamps) - 1):
         diff = abs(timestamps[i] - timestamps[i+1])
         if diff > MAX_TIME:
-            raise StandbyTransition(f'Past timesteps {i} and {i+1} are too far apart ({diff}s)')
-
+            raise StandbyTransition(f'Past time steps {i} and {i+1} are too far apart ({diff}s)')
 
 
 def _verify_location(locations: List[Tuple[float, float, float]]) -> None:
@@ -36,5 +35,4 @@ def _verify_location(locations: List[Tuple[float, float, float]]) -> None:
     for i in range(len(locations) - 1):
         distance = dist(locations[i], locations[i+1])
         if distance > MAX_DIST:
-            raise StandbyTransition(f'Locations at past timesteps {i} and {i+1} are too far apart ({distance}m)')
-
+            raise StandbyTransition(f'Locations at past time steps {i} and {i+1} are too far apart ({distance}m)')

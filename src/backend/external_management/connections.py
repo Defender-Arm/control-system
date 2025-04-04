@@ -1,5 +1,4 @@
 import cv2
-from enum import IntEnum
 from math import pi
 from numpy import ndarray
 import serial
@@ -21,12 +20,6 @@ ARM_BASE_LENGTH = 0.268  # metres
 ARM_FORE_LENGTH = 0.1665
 ARM_COLLISION_LENGTH = 0.175
 ARM_SWORD_LENGTH = ARM_COLLISION_LENGTH * 2
-
-
-class Joint(IntEnum):
-    BASE = 0
-    ELBOW = 1
-    WRIST = 2
 
 
 class Ext:
