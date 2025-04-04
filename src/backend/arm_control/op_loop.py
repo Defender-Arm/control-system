@@ -4,7 +4,7 @@ from time import monotonic
 from src.backend.error.standby_transition import StandbyTransition
 from src.backend.external_management.connections import Ext
 from src.backend.sensor_fusion.tracking import (
-    find_in_image, create_ray, locate_object, store_location, get_location_history
+    find_in_image, create_ray, locate_object, store_location, get_location_history, clear_location_history
 )
 from src.backend.state_management.error_checker import verify_track
 from src.backend.state_management.state_manager import Manager, State
@@ -34,7 +34,6 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
     last_state = None
     log_file = open('run_app.log', 'w')
     last = 0
-    last_ang = [999, 999, 999]
 
     # start main loop
     print('Starting')
@@ -50,6 +49,8 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                     connection_manager.disconnect_cameras()
                     connection_manager.connect_cameras()
                     connection_manager.verify_connection()
+                last_ang = [999, 999, 999]
+                clear_location_history()
                 state_manager.ready()
                 post_msg('Calibration successful', gui, False)
             elif state_manager.get_state() > State.CALIBRATE:
