@@ -19,5 +19,5 @@ def pos_to_arm_angles(x: float, y: float, z: float) -> Tuple[float, float, float
     """
     base = atan(x/y)
     elbow = atan(z/(y / cos(base)))
-    wrist = base + pi/2
+    wrist = -base + pi/2
     return base, elbow, wrist

@@ -33,26 +33,59 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
     print('Preparing managers...')
     last_state = None
     log_file = open('run_app.log', 'w')
-    last = 0
+    last_ang = [999, 999, 999]
 
     # start main loop
     print('Starting')
+    connection_manager.send_serial(State.STANDBY)
     while state_manager.get_state() > State.OFF:
         try:
             if state_manager.get_state() == State.CALIBRATE:
-                # predefined checks
-                try:
-                    connection_manager.verify_connection()
-                    _ = connection_manager.take_photos()
-                except StandbyTransition as st:
-                    post_msg(f'{st.message}; reconnecting', gui, False)
-                    connection_manager.disconnect_cameras()
-                    connection_manager.connect_cameras()
-                    connection_manager.verify_connection()
-                last_ang = [999, 999, 999]
-                clear_location_history()
-                state_manager.ready()
-                post_msg('Calibration successful', gui, False)
+                cam_cal_success = False
+                for attempt in range(2):
+                    try:
+                        # check connected to cam + serial
+                        connection_manager.verify_connection()
+                        _ = connection_manager.take_photos()
+                        cam_cal_success = True
+                        break
+                    except StandbyTransition as st:
+                        # if fails, reconnect cameras and retry
+                        if attempt < 1:
+                            post_msg(f'{st.message}; retrying', gui, False)
+                            connection_manager.disconnect_cameras()
+                            connection_manager.connect_cameras()
+                if not cam_cal_success:
+                    state_manager.standby()
+                    post_msg('Calibration failed', gui, True)
+                else:
+                    # ensure it can find object
+                    distance = 0
+                    clear_location_history()
+                    for i in range(5):
+                        photos = connection_manager.take_photos()
+                        center_l, angle_l = find_in_image(photos[0])
+                        center_r, angle_r = find_in_image(photos[1])
+                        ray_l = create_ray(*center_l, connection_manager.cam_res)
+                        ray_r = create_ray(*center_r, connection_manager.cam_res)
+                        vis.set_cam_rays(ray_l, ray_r)
+                        location = locate_object(ray_l, ray_r)
+                        store_location(monotonic(), location)
+                        vis.set_obj(location)
+                        verify_track(get_location_history())
+                        distance += location[1]  # y coord; distance from arm front
+                    # if object behind arm, swap cams
+                    if distance < 0:
+                        connection_manager.swap_cameras()
+                    # check mechanical calibration
+                    connection_manager.recv_serial()
+                    connection_manager.send_serial(State.CALIBRATE)
+                    connection_manager.recv_serial()
+                    state_manager.ready()
+                    connection_manager.send_serial(State.READY)
+                    last_ang = [999, 999, 999]
+                    clear_location_history()
+                    post_msg('Calibration successful', gui, False)
             elif state_manager.get_state() > State.CALIBRATE:
                 # monitor tracking
                 photos = connection_manager.take_photos()
@@ -65,10 +98,14 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                 store_location(monotonic(), location)
                 vis.set_obj(location)
                 verify_track(get_location_history())
+                if state_manager.get_state() == State.READY:
+                    connection_manager.recv_serial()
+                    connection_manager.send_serial(State.READY)
                 if state_manager.get_state() == State.ACTIVE:
                     # act upon tracking
                     arm_angles = pos_to_arm_angles(*location)
-                    arm_angles = [angle*R_TO_D for angle in arm_angles]
+                    arm_angles = [int(angle*R_TO_D) for angle in arm_angles]
+                    # limit to bounds
                     if arm_angles[0] < -60:
                         print(f'arm_angles[0] increased from {arm_angles[0]} to -60')
                         arm_angles[0] = -60
@@ -84,26 +121,28 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                     if abs(arm_angles[2]) > 180:
                         print(f'arm_angles[2] changed from {arm_angles[2]} to 180')
                         arm_angles[2] = 180
-                    if last + 0.2 < monotonic():
-                        if (
-                                abs(last_ang[0] - arm_angles[0]) > 5 or
-                                abs(last_ang[1] - arm_angles[1]) > 5 or
-                                abs(last_ang[2] - arm_angles[2]) > 5
-                        ):
-                            print(f'target is {int(arm_angles[0])} {int(arm_angles[1])} {int(arm_angles[2])}')
-                            last = monotonic()
-                            last_ang = arm_angles
-                            log_file.write(f'o {int(arm_angles[0])} {int(arm_angles[1])} {int(arm_angles[2])}\n')
-                        else:
-                            last = monotonic()
-                            print(f'RESEND target is {int(last_ang[0])} {-int(last_ang[1])} {int(last_ang[2])}')
-                            log_file.write(f'r {int(last_ang[0])} {int(last_ang[1])} {int(last_ang[2])}\n')
+                    # reduce small movements by resending
+                    if (
+                            abs(last_ang[0] - arm_angles[0]) > 5 or
+                            abs(last_ang[1] - arm_angles[1]) > 5 or
+                            abs(last_ang[2] - arm_angles[2]) > 5
+                    ):
+                        connection_manager.recv_serial()
+                        connection_manager.send_serial(State.ACTIVE, arm_angles)
+                        last_ang = arm_angles
+                        log_file.write(f'o {arm_angles[0]} {arm_angles[1]} {arm_angles[2]}\n')
                     else:
-                        log_file.write(f'x {int(arm_angles[0])} {int(arm_angles[1])} {int(arm_angles[2])}\n')
+                        connection_manager.recv_serial()
+                        connection_manager.send_serial(State.ACTIVE, last_ang)
+                        log_file.write(f'r {last_ang[0]} {last_ang[1]} {last_ang[2]}\n')
+            else:
+                connection_manager.recv_serial()
+                connection_manager.send_serial(State.STANDBY)
         except StandbyTransition as st:
             # handle error
             post_msg(st.message, gui, True)
             state_manager.error(st.message)
+            connection_manager.send_serial(State.STANDBY)
         # handle state transitions
         current_state = state_manager.get_state()
         if last_state != state_manager.get_state():
@@ -115,6 +154,8 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
         gui.set_state(State.OFF)
     print('Cleaning up...')
     # cleanup
+    connection_manager.send_serial(State.OFF)
+    connection_manager.disconnect_motor_control()
     connection_manager.disconnect_cameras()
     if gui.root.winfo_exists():
         gui.root.quit()

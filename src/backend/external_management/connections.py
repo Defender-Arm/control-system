@@ -1,11 +1,11 @@
 import cv2
-from enum import IntEnum
 from math import pi
 from numpy import ndarray
 import serial
-from typing import Optional, Tuple
+from typing import List, Tuple
 
 from src.backend.error.standby_transition import StandbyTransition
+from src.backend.state_management.state_manager import State
 
 
 LEFT_CAM_INDEX = 1
@@ -14,17 +14,12 @@ LEFT_CAM_OFFSET = (0.3, 0.0, 0.0)  # TODO m from origin
 LEFT_CAM_ANGLES = (0, pi/8)  # TODO rad from origin
 CAM_FOV = 110.0 * 2*pi / 360
 SERIAL_PORT = 'COM4'
+SERIAL_FREQ = 0.1
 
 ARM_BASE_LENGTH = 0.268  # metres
 ARM_FORE_LENGTH = 0.1665
 ARM_COLLISION_LENGTH = 0.175
 ARM_SWORD_LENGTH = ARM_COLLISION_LENGTH * 2
-
-
-class Joint(IntEnum):
-    BASE = 0
-    ELBOW = 1
-    WRIST = 2
 
 
 class Ext:
@@ -59,6 +54,11 @@ class Ext:
         if self._right_cam:
             self._right_cam.release()
 
+    def swap_cameras(self):
+        """Switches the "left" camera and the "right" camera in code.
+        """
+        self._left_cam, self._right_cam = self._right_cam, self._left_cam
+
     def connect_motor_control(self):
         """Opens connection to motor control.
         """
@@ -71,6 +71,7 @@ class Ext:
         """Closes connection to motor control.
         """
         if self._arduino and self._arduino.is_open:
+            self._arduino.flush()
             self._arduino.close()
 
     def verify_connection(self):
@@ -100,9 +101,33 @@ class Ext:
         """
         raise NotImplementedError
 
-    def set_joint_targets(self, angles: Tuple[float, float, float]) -> None:
-        """Changes target angle of 3 joints to given angles in radians.
+    def send_serial(self, state: State, angles: List[int] = (0, 0, 0)) -> None:
+        """Sends state and target angles for arm to motor control.
         """
-        command = f'{angles[0]} {angles[1]} {angles[2]}\n'
-        print(command.strip(), self._arduino.is_open)
-        self._arduino.write(command.encode('utf-8'))
+        command = f'{state.value} {angles[0]} {angles[1]} {angles[2]}\n'
+        try:
+            self._arduino.flush()
+            self._arduino.write(command.encode('utf-8'))
+        except serial.SerialException:
+            return
+
+    def recv_serial(self):
+        """Reads line from motor controller.
+        :raise StandbyTransition: Error is received or unable to read from motor controller.
+        """
+        try:
+            msg = self._arduino.readline().decode('utf-8').strip()
+        except serial.SerialException:
+            return
+        if len(msg) == 0:
+            return
+        error_val = int(msg, 2)
+        if error_val != 0:
+            errs = []
+            if error_val & 1:
+                errs.append('wrist')
+            if error_val >> 1 & 1:
+                errs.append('elbow')
+            if error_val >> 2 & 1:
+                errs.append('base')
+            raise StandbyTransition(f'Error from motor control at {",".join(errs)} (error code: {error_val})')
