@@ -41,17 +41,43 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
     while state_manager.get_state() > State.OFF:
         try:
             if state_manager.get_state() == State.CALIBRATE:
-                # predefined checks
-                try:
-                    connection_manager.verify_connection()
-                    _ = connection_manager.take_photos()
-                except StandbyTransition as st:
-                    post_msg(f'{st.message}; reconnecting', gui, False)
-                    connection_manager.disconnect_cameras()
-                    connection_manager.connect_cameras()
-                    connection_manager.verify_connection()
-                state_manager.ready()
-                post_msg('Calibration successful', gui, False)
+                cam_cal_success = False
+                for attempt in range(2):
+                    try:
+                        # check connected to cam + serial
+                        connection_manager.verify_connection()
+                        _ = connection_manager.take_photos()
+                        cam_cal_success = True
+                        break
+                    except StandbyTransition as st:
+                        # if fails, reconnect cameras and retry
+                        if attempt < 1:
+                            post_msg(f'{st.message}; retrying', gui, False)
+                            connection_manager.disconnect_cameras()
+                            connection_manager.connect_cameras()
+                if not cam_cal_success:
+                    state_manager.standby()
+                    post_msg('Calibration failed', gui, True)
+                else:
+                    # ensure it can find object
+                    distance = 0
+                    for i in range(5):
+                        photos = connection_manager.take_photos()
+                        center_l, angle_l = find_in_image(photos[0])
+                        center_r, angle_r = find_in_image(photos[1])
+                        ray_l = create_ray(*center_l, connection_manager.cam_res)
+                        ray_r = create_ray(*center_r, connection_manager.cam_res)
+                        vis.set_cam_rays(ray_l, ray_r)
+                        location = locate_object(ray_l, ray_r)
+                        store_location(monotonic(), location)
+                        vis.set_obj(location)
+                        verify_track(get_location_history())
+                        distance += location[1]  # y coord; distance from arm front
+                    # if object behind arm, swap cams
+                    if distance < 0:
+                        connection_manager.swap_cameras()
+                    state_manager.ready()
+                    post_msg('Calibration successful', gui, False)
             elif state_manager.get_state() > State.CALIBRATE:
                 # monitor tracking
                 photos = connection_manager.take_photos()
