@@ -8,6 +8,7 @@ from src.backend.sensor_fusion.tracking import (
 )
 from src.backend.state_management.error_checker import verify_track
 from src.backend.state_management.state_manager import Manager, State
+from src.backend.arm_control.trajectory import simple_trajectory
 from src.backend.arm_control.kinematics import pos_to_arm_angles, R_TO_D
 from src.frontend.gui import Gui
 from src.frontend.visualisation import Graph
@@ -103,7 +104,7 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                     connection_manager.send_serial(State.READY)
                 if state_manager.get_state() == State.ACTIVE:
                     # act upon tracking
-                    arm_angles = pos_to_arm_angles(*location)
+                    arm_angles = pos_to_arm_angles(*simple_trajectory(location))
                     arm_angles = [int(angle*R_TO_D) for angle in arm_angles]
                     # limit to bounds
                     if arm_angles[0] < -60:
