@@ -59,6 +59,11 @@ class Ext:
         if self._right_cam:
             self._right_cam.release()
 
+    def swap_cameras(self):
+        """Switches the "left" camera and the "right" camera in code.
+        """
+        self._left_cam, self._right_cam = self._right_cam, self._left_cam
+
     def connect_motor_control(self):
         """Opens connection to motor control.
         """
