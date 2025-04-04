@@ -37,7 +37,8 @@ def limit_joint_to_range(value: int, lower: int, upper: int, joint: str = 'joint
             print(f'{joint} increased from {value} to {lower}')
         return lower
     elif value > upper:
-        print(f'{joint} decreased from {value} to {upper}')
+        if verbose:
+            print(f'{joint} decreased from {value} to {upper}')
         return upper
     return value
 
