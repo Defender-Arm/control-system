@@ -24,7 +24,7 @@ ARM_SWORD_LENGTH = ARM_COLLISION_LENGTH * 2
 
 class Ext:
 
-    def __init__(self):
+    def __init__(self, ignore_motors: bool = False):
         """Creates and stores all connections to external devices.
         """
         self._right_cam = None
@@ -32,7 +32,9 @@ class Ext:
         self.cam_res = [0, 0]
         self._arduino = None
         self.connect_cameras()
-        self.connect_motor_control()
+        self.ignore_motors = ignore_motors
+        if not self.ignore_motors:
+            self.connect_motor_control()
 
     def connect_cameras(self):
         """Opens connection to cameras.
@@ -40,7 +42,7 @@ class Ext:
         self._left_cam = cv2.VideoCapture(LEFT_CAM_INDEX, cv2.CAP_DSHOW)
         self._left_cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
         self._left_cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-        self._right_cam = cv2.VideoCapture(RIGHT_CAM_INDEX, cv2.CAP_DSHOW)
+        self._right_cam = cv2.VideoCapture(RIGHT_CAM_INDEX, cv2.CA_DSHOW)
         self._right_cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
         self._right_cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
         self.cam_res = (self._left_cam.get(cv2.CAP_PROP_FRAME_WIDTH),
@@ -62,6 +64,8 @@ class Ext:
     def connect_motor_control(self):
         """Opens connection to motor control.
         """
+        if self.ignore_motors:
+            return
         if not self._arduino:
             self._arduino = serial.Serial(SERIAL_PORT, 9600, timeout=1)
         if not self._arduino.is_open:
@@ -70,6 +74,8 @@ class Ext:
     def disconnect_motor_control(self):
         """Closes connection to motor control.
         """
+        if self.ignore_motors:
+            return
         if self._arduino and self._arduino.is_open:
             self._arduino.flush()
             self._arduino.close()
@@ -104,6 +110,8 @@ class Ext:
     def send_serial(self, state: State, angles: List[int] = (0, 0, 0)) -> None:
         """Sends state and target angles for arm to motor control.
         """
+        if self.ignore_motors:
+            return
         command = f'{state.value} {angles[0]} {angles[1]} {angles[2]}\n'
         try:
             self._arduino.flush()
@@ -115,6 +123,8 @@ class Ext:
         """Reads line from motor controller.
         :raise StandbyTransition: Error is received or unable to read from motor controller.
         """
+        if self.ignore_motors:
+            return
         try:
             msg = self._arduino.readline().decode('utf-8').strip()
         except serial.SerialException:
