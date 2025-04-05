@@ -10,6 +10,7 @@ from src.backend.state_management.error_checker import verify_track
 from src.backend.state_management.state_manager import Manager, State
 from src.backend.arm_control.trajectory import simple_trajectory
 from src.backend.arm_control.kinematics import pos_to_arm_angles, R_TO_D
+from src.backend.performance.timer import Timer
 from src.frontend.gui import Gui
 from src.frontend.visualisation import Graph
 
@@ -50,11 +51,16 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
     last_state = None
     log_file = open('run_app.log', 'w')
     last_ang = [999, 999, 999]
+    loop_timer = Timer(['state_action', 'state_update'], 'loop-timer', 0)
+    active_timer = Timer(['take_photos', 'find_sword', 'create_rays', 'place_rays', 'locate_object',
+                          'store_location', 'set_obj', 'verify_track', 'arm_angles', 'send_angles'],
+                         'active-timer', 0)
 
     # start main loop
     print('Starting')
     connection_manager.send_serial(State.STANDBY)
     while state_manager.get_state() > State.OFF:
+        loop_timer.start_loop()
         try:
             if state_manager.get_state() == State.CALIBRATE:
                 cam_cal_success = False
@@ -103,17 +109,26 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                     clear_location_history()
                     post_msg('Calibration successful', gui, False)
             elif state_manager.get_state() > State.CALIBRATE:
+                active_timer.start_loop()
                 # monitor tracking
                 photos = connection_manager.take_photos()
+                active_timer.split()
                 center_l, angle_l = find_in_image(photos[0])
                 center_r, angle_r = find_in_image(photos[1])
+                active_timer.split()
                 ray_l = create_ray(*center_l, connection_manager.cam_res)
                 ray_r = create_ray(*center_r, connection_manager.cam_res)
+                active_timer.split()
                 vis.set_cam_rays(ray_l, ray_r)
+                active_timer.split()
                 location = locate_object(ray_l, ray_r)
+                active_timer.split()
                 store_location(monotonic(), location)
+                active_timer.split()
                 vis.set_obj(location)
+                active_timer.split()
                 verify_track(get_location_history())
+                active_timer.split()
                 if state_manager.get_state() == State.READY:
                     connection_manager.recv_serial()
                     connection_manager.send_serial(State.READY)
@@ -126,6 +141,7 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                         limit_joint_to_range(arm_angles[1]*R_TO_D, -35, 55),
                         limit_joint_to_range(arm_angles[2]*R_TO_D, -180, 180),
                     ]
+                    active_timer.split()
                     # reduce small movements by resending
                     if (
                             abs(last_ang[0] - arm_angles[0]) > 5 or
@@ -140,6 +156,7 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                         connection_manager.recv_serial()
                         connection_manager.send_serial(State.ACTIVE, last_ang)
                         log_file.write(f'r {last_ang[0]} {last_ang[1]} {last_ang[2]}\n')
+                    active_timer.split()
             else:
                 connection_manager.recv_serial()
                 connection_manager.send_serial(State.STANDBY)
@@ -149,16 +166,20 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
             state_manager.error(st.message)
             connection_manager.send_serial(State.STANDBY)
         # handle state transitions
+        loop_timer.split()
         current_state = state_manager.get_state()
         if last_state != state_manager.get_state():
             last_state = current_state
             gui.set_state(current_state)
             post_msg(f'State transition to {current_state.name}', gui, False)
+        loop_timer.split()
 
     if gui.root.winfo_exists():
         gui.set_state(State.OFF)
     print('Cleaning up...')
     # cleanup
+    loop_timer.end()
+    active_timer.end()
     connection_manager.send_serial(State.OFF)
     connection_manager.disconnect_motor_control()
     connection_manager.disconnect_cameras()
