@@ -2,6 +2,8 @@ import cv2
 from math import pi
 from numpy import ndarray
 import serial
+import serial.tools.list_ports
+from time import sleep
 from typing import List, Tuple
 
 from src.backend.error.standby_transition import StandbyTransition
@@ -14,12 +16,19 @@ LEFT_CAM_OFFSET = (0.3, 0.0, 0.0)  # TODO m from origin
 LEFT_CAM_ANGLES = (0, pi/8)  # TODO rad from origin
 CAM_FOV = 110.0 * 2*pi / 360
 SERIAL_PORT = 'COM4'
-SERIAL_FREQ = 0.1
+SERIAL_BAUD_RATE = 115200
 
 ARM_BASE_LENGTH = 0.268  # metres
 ARM_FORE_LENGTH = 0.1665
 ARM_COLLISION_LENGTH = 0.175
 ARM_SWORD_LENGTH = ARM_COLLISION_LENGTH * 2
+
+
+def is_arduino_connected() -> bool:
+    """Checks COM ports to ensure arduino is connected.
+    :return: True if port is present
+    """
+    return SERIAL_PORT in [port.name for port in list(serial.tools.list_ports.comports())]
 
 
 class Ext:
@@ -32,7 +41,7 @@ class Ext:
         self.cam_res = [0, 0]
         self._arduino = None
         self.connect_cameras()
-        self.connect_motor_control()
+        self.connect_arduino()
 
     def connect_cameras(self):
         """Opens connection to cameras.
@@ -59,19 +68,16 @@ class Ext:
         """
         self._left_cam, self._right_cam = self._right_cam, self._left_cam
 
-    def connect_motor_control(self):
+    def connect_arduino(self):
         """Opens connection to motor control.
         """
-        if not self._arduino:
-            self._arduino = serial.Serial(SERIAL_PORT, 9600, timeout=1)
-        if not self._arduino.is_open:
-            self._arduino.open()
+        self._arduino = serial.Serial(SERIAL_PORT, SERIAL_BAUD_RATE, timeout=1)
+        sleep(2)
 
-    def disconnect_motor_control(self):
+    def disconnect_arduino(self):
         """Closes connection to motor control.
         """
-        if self._arduino and self._arduino.is_open:
-            self._arduino.flush()
+        if self._arduino:
             self._arduino.close()
 
     def verify_connection(self):
@@ -82,6 +88,8 @@ class Ext:
             raise StandbyTransition(f'Left camera {LEFT_CAM_INDEX} is not open')
         if not self._right_cam or not self._right_cam.isOpened():
             raise StandbyTransition(f'Right camera {RIGHT_CAM_INDEX} is not open')
+        if not self.ignore_motors and (not self._arduino or not is_arduino_connected()):
+            raise StandbyTransition(f'Arduino is not connected')
 
     def take_photos(self) -> Tuple[ndarray, ndarray]:
         """Gets snapshot from both cameras.
@@ -108,8 +116,8 @@ class Ext:
         try:
             self._arduino.flush()
             self._arduino.write(command.encode('utf-8'))
-        except serial.SerialException:
-            return
+        except serial.serialutil.SerialException:
+            raise StandbyTransition(f'Error sending message "{command.strip()}" over serial')
 
     def recv_serial(self):
         """Reads line from motor controller.
@@ -117,17 +125,8 @@ class Ext:
         """
         try:
             msg = self._arduino.readline().decode('utf-8').strip()
-        except serial.SerialException:
-            return
-        if len(msg) == 0:
-            return
+        except serial.serialutil.SerialException:
+            raise StandbyTransition(f'Error reading serial')
         error_val = int(msg, 2)
         if error_val != 0:
-            errs = []
-            if error_val & 1:
-                errs.append('wrist')
-            if error_val >> 1 & 1:
-                errs.append('elbow')
-            if error_val >> 2 & 1:
-                errs.append('base')
-            raise StandbyTransition(f'Error from motor control at {",".join(errs)} (error code: {error_val})')
+            raise StandbyTransition(f'Serial indicated error (error code: {error_val})')
