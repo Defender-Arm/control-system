@@ -1,9 +1,14 @@
 import serial
+import serial.tools.list_ports
 import time
 
-ser = serial.Serial('COM4', 115200, timeout=1)
+PORT = 'COM4'
+BAUD_RATE = 115200
 
-time.sleep(2)
+
+def check_for_port(port: str):
+    ports = [p.name for p in list(serial.tools.list_ports.comports())]
+    return port in ports
 
 
 def send_command(state, base, elbow, wrist):
@@ -27,6 +32,17 @@ def send_command(state, base, elbow, wrist):
         ser.open()
 
 
-while True:
+# RUN =============================================================
+if not check_for_port(PORT):
+    print(f'{PORT} not present')
+    exit()
+ser = serial.Serial(PORT, BAUD_RATE, timeout=1)
+
+time.sleep(2)
+
+while check_for_port(PORT):
     send_command(1, 0, 0, 0)
     time.sleep(0.5)
+
+ser.close()
+print(ser.is_open)
