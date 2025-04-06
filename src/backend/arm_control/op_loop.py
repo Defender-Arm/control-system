@@ -181,7 +181,7 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
     loop_timer.end()
     active_timer.end()
     connection_manager.send_serial(State.OFF)
-    connection_manager.disconnect_motor_control()
+    connection_manager.disconnect_arduino()
     connection_manager.disconnect_cameras()
     if gui.root.winfo_exists():
         gui.root.quit()
