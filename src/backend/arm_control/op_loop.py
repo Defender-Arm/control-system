@@ -132,7 +132,7 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                 if state_manager.get_state() == State.READY:
                     connection_manager.recv_serial()
                     connection_manager.send_serial(State.READY)
-                if state_manager.get_state() == State.ACTIVE:
+                elif state_manager.get_state() == State.ACTIVE:
                     # act upon tracking
                     arm_angles = pos_to_arm_angles(*simple_trajectory(location))
                     # limit to bounds
@@ -168,7 +168,11 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
         # handle state transitions
         loop_timer.split()
         current_state = state_manager.get_state()
-        if last_state != state_manager.get_state():
+        if last_state != current_state:
+            if last_state == State.ACTIVE and current_state == State.READY:
+                # end with return to (0,0,0)
+                connection_manager.recv_serial()
+                connection_manager.send_serial(State.ACTIVE)
             last_state = current_state
             gui.set_state(current_state)
             post_msg(f'State transition to {current_state.name}', gui, False)
