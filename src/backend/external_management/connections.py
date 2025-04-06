@@ -12,7 +12,7 @@ LEFT_CAM_INDEX = 1
 RIGHT_CAM_INDEX = 2
 LEFT_CAM_OFFSET = (0.3, 0.0, 0.0)  # TODO m from origin
 LEFT_CAM_ANGLES = (0, pi/8)  # TODO rad from origin
-CAM_FOV = 110.0 * 2*pi / 360
+CAM_FOV = 70.0 * 2*pi / 360
 SERIAL_PORT = 'COM4'
 SERIAL_FREQ = 0.1
 
