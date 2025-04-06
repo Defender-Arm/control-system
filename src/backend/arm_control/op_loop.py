@@ -122,9 +122,9 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                     arm_angles = pos_to_arm_angles(*simple_trajectory(location))
                     # limit to bounds
                     arm_angles = [
-                        limit_joint_to_range(arm_angles[0]*R_TO_D, -60, 60),
-                        limit_joint_to_range(arm_angles[1]*R_TO_D, -35, 55),
-                        limit_joint_to_range(arm_angles[2]*R_TO_D, -180, 180),
+                        limit_joint_to_range(int(arm_angles[0]*R_TO_D), -60, 60),
+                        limit_joint_to_range(int(arm_angles[1]*R_TO_D), -35, 55),
+                        limit_joint_to_range(int(arm_angles[2]*R_TO_D), -180, 180),
                     ]
                     # reduce small movements by resending
                     if (
