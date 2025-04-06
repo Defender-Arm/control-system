@@ -38,11 +38,7 @@ class Ext:
         """Opens connection to cameras.
         """
         self._left_cam = cv2.VideoCapture(LEFT_CAM_INDEX, cv2.CAP_DSHOW)
-        self._left_cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-        self._left_cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
         self._right_cam = cv2.VideoCapture(RIGHT_CAM_INDEX, cv2.CAP_DSHOW)
-        self._right_cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-        self._right_cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
         self.cam_res = (self._left_cam.get(cv2.CAP_PROP_FRAME_WIDTH),
                         self._left_cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
