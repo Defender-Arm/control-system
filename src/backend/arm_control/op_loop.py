@@ -1,5 +1,5 @@
 from datetime import datetime
-from time import monotonic
+from time import monotonic, sleep
 
 from src.backend.error.standby_transition import StandbyTransition
 from src.backend.external_management.connections import Ext
@@ -9,7 +9,7 @@ from src.backend.sensor_fusion.tracking import (
 from src.backend.state_management.error_checker import verify_track
 from src.backend.state_management.state_manager import Manager, State
 from src.backend.arm_control.trajectory import simple_trajectory
-from src.backend.arm_control.kinematics import pos_to_arm_angles, R_TO_D
+from src.backend.arm_control.kinematics import pos_to_arm_angles, R_TO_D, RESEND_DEG_THRESH
 from src.backend.performance.timer import Timer
 from src.frontend.gui import Gui
 from src.frontend.visualisation import Graph
@@ -77,6 +77,8 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                             post_msg(f'{st.message}; retrying', gui, False)
                             connection_manager.disconnect_cameras()
                             connection_manager.connect_cameras()
+                            connection_manager.disconnect_arduino()
+                            connection_manager.connect_arduino()
                 if not cam_cal_success:
                     state_manager.standby()
                     post_msg('Calibration failed', gui, True)
@@ -100,8 +102,8 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                     if distance < 0:
                         connection_manager.swap_cameras()
                     # check mechanical calibration
-                    connection_manager.recv_serial()
                     connection_manager.send_serial(State.CALIBRATE)
+                    sleep(6)
                     connection_manager.recv_serial()
                     state_manager.ready()
                     connection_manager.send_serial(State.READY)
@@ -130,7 +132,6 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                 verify_track(get_location_history())
                 active_timer.split()
                 if state_manager.get_state() == State.READY:
-                    connection_manager.recv_serial()
                     connection_manager.send_serial(State.READY)
                 elif state_manager.get_state() == State.ACTIVE:
                     # act upon tracking
@@ -144,21 +145,18 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                     active_timer.split()
                     # reduce small movements by resending
                     if (
-                            abs(last_ang[0] - arm_angles[0]) > 5 or
-                            abs(last_ang[1] - arm_angles[1]) > 5 or
-                            abs(last_ang[2] - arm_angles[2]) > 5
+                            abs(last_ang[0] - arm_angles[0]) > RESEND_DEG_THRESH or
+                            abs(last_ang[1] - arm_angles[1]) > RESEND_DEG_THRESH or
+                            abs(last_ang[2] - arm_angles[2]) > RESEND_DEG_THRESH
                     ):
-                        connection_manager.recv_serial()
                         connection_manager.send_serial(State.ACTIVE, arm_angles)
                         last_ang = arm_angles
                         log_file.write(f'o {arm_angles[0]} {arm_angles[1]} {arm_angles[2]}\n')
                     else:
-                        connection_manager.recv_serial()
-                        connection_manager.send_serial(State.ACTIVE, last_ang)
+                        # connection_manager.send_serial(State.ACTIVE, last_ang)
                         log_file.write(f'r {last_ang[0]} {last_ang[1]} {last_ang[2]}\n')
                     active_timer.split()
             else:
-                connection_manager.recv_serial()
                 connection_manager.send_serial(State.STANDBY)
         except StandbyTransition as st:
             # handle error
@@ -171,7 +169,6 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
         if last_state != current_state:
             if last_state == State.ACTIVE and current_state == State.READY:
                 # end with return to (0,0,0)
-                connection_manager.recv_serial()
                 connection_manager.send_serial(State.ACTIVE)
             last_state = current_state
             gui.set_state(current_state)

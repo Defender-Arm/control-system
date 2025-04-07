@@ -107,8 +107,8 @@ def locate_object(
     q1 = numpy.array(p1) + t1 * numpy.array(d1)
     q2 = numpy.array(p2) + t2 * numpy.array(d2)
     distance = dist(q1, q2)
-    if distance > 0.1:
-        pass#raise StandbyTransition(f'Cameras localize object to farther than 0.1m apart ({distance}m)')
+    if distance > 0.3:
+        raise StandbyTransition(f'Cameras localize object to farther than 0.3m apart ({distance}m)')
     location = (q1 + q2) / 2
     store_location(monotonic(), location)
     return location
