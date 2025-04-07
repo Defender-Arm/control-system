@@ -21,6 +21,6 @@ def simple_trajectory(location: numpy.typing.NDArray[numpy.float64]) -> numpy.ty
     :return: New exaggerated location
     """
     location[0] = location[0]
-    location[1] = location[1] + 0.16
+    location[1] = location[1]
     location[2] = location[2] - 0.25
     return location
