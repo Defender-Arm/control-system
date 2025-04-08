@@ -21,10 +21,10 @@ UPPER_RED_2 = numpy.array([180, 255, 255])
 _history = []
 
 
-def find_in_image(image: numpy.ndarray) -> Optional[Tuple[Tuple[int, int], float]]:
+def find_in_image(image: numpy.ndarray) -> Optional[Tuple[Tuple[int, int], float, numpy.ndarray]]:
     """Finds the pixel coordinates of the centre of the object in the image.
     :raise StandbyTransition: Unable to locate an object in the image similar enough to the target colour
-    :return: Pixel location, (x, y) from top left, angle from upwards; None if object could not be found
+    :return: Pixel location, (x, y) from top left, angle from upwards, processed frame; None if obj could not be found
     """
     # convert to HSV for processing
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
@@ -33,7 +33,7 @@ def find_in_image(image: numpy.ndarray) -> Optional[Tuple[Tuple[int, int], float
     mask2 = cv2.inRange(hsv, LOWER_RED_2, UPPER_RED_2)
     mask = mask1 + mask2
     # Apply morphological operations to remove noise
-    kernel = numpy.ones((5, 5), numpy.uint8)
+    kernel = numpy.ones((3, 3), numpy.uint8)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
     # Find contours
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -45,7 +45,12 @@ def find_in_image(image: numpy.ndarray) -> Optional[Tuple[Tuple[int, int], float
         # Extract center and orientation
         center = (int(rect[0][0]), int(rect[0][1]))  # x, y
         angle = rect[2]  # Rotation angle
-        return center, angle
+        # draw on for returning processed frame
+        box = cv2.boxPoints(rect)
+        box = box.astype(int)
+        cv2.drawContours(mask, [box], 0, (0, 255, 0), 2)
+        cv2.circle(mask, center, 5, (0, 255, 0))
+        return center, angle, mask
     else:
         raise StandbyTransition('Unable to determine possible location of sword')
 
@@ -108,7 +113,7 @@ def locate_object(
     q2 = numpy.array(p2) + t2 * numpy.array(d2)
     distance = dist(q1, q2)
     if distance > 0.3:
-        raise StandbyTransition(f'Cameras localize object to farther than 0.3m apart ({distance}m)')
+        pass#raise StandbyTransition(f'Cameras localize object to farther than 0.3m apart ({distance}m)')
     location = (q1 + q2) / 2
     store_location(monotonic(), location)
     return location

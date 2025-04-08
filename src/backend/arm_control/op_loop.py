@@ -1,4 +1,5 @@
 from datetime import datetime
+import numpy as np
 from time import monotonic, sleep
 
 from src.backend.error.standby_transition import StandbyTransition
@@ -88,8 +89,8 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                     clear_location_history()
                     for i in range(5):
                         photos = connection_manager.take_photos()
-                        center_l, angle_l = find_in_image(photos[0])
-                        center_r, angle_r = find_in_image(photos[1])
+                        center_l, angle_l, _ = find_in_image(photos[0])
+                        center_r, angle_r, _ = find_in_image(photos[1])
                         ray_l = create_ray(*center_l, connection_manager.cam_res)
                         ray_r = create_ray(*center_r, connection_manager.cam_res)
                         vis.set_cam_rays(ray_l, ray_r)
@@ -103,7 +104,7 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                         connection_manager.swap_cameras()
                     # check mechanical calibration
                     connection_manager.send_serial(State.CALIBRATE)
-                    sleep(6)
+                    # sleep(6)
                     connection_manager.recv_serial()
                     state_manager.ready()
                     connection_manager.send_serial(State.READY)
@@ -115,14 +116,15 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                 # monitor tracking
                 photos = connection_manager.take_photos()
                 active_timer.split()
-                center_l, angle_l = find_in_image(photos[0])
-                center_r, angle_r = find_in_image(photos[1])
+                center_l, angle_l, mask_frame_l = find_in_image(photos[0])
+                center_r, angle_r, mask_frame_r = find_in_image(photos[1])
                 active_timer.split()
                 ray_l = create_ray(*center_l, connection_manager.cam_res)
                 ray_r = create_ray(*center_r, connection_manager.cam_res)
                 active_timer.split()
                 vis.set_cam_rays(ray_l, ray_r)
                 active_timer.split()
+                gui.cam_feed(np.hstack((mask_frame_l, mask_frame_r)))
                 location = locate_object(ray_l, ray_r)
                 active_timer.split()
                 store_location(monotonic(), location)

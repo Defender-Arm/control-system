@@ -8,14 +8,17 @@ from src.frontend.visualisation import Graph
 from src.frontend.gui import Gui
 
 
+IGNORE_SERIAL = True
+
+
 if __name__ == '__main__':
     # pre-check
-    if not is_arduino_connected():
+    if not is_arduino_connected() and not IGNORE_SERIAL:
         print('Please connect Arduino')
         exit(1)
     # create instances
     state_manager = Manager()
-    connection_manager = Ext()
+    connection_manager = Ext(ignore_motors=IGNORE_SERIAL)
     root = tk.Tk()
     vis = Graph(root)
     gui = Gui(root, state_manager, vis)

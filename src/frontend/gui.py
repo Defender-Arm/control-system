@@ -1,4 +1,6 @@
 import tkinter as tk
+import cv2
+from numpy import ndarray
 
 from src.backend.state_management.state_manager import (
     Manager, MANUAL_TRANSITION_DICT, State
@@ -6,6 +8,7 @@ from src.backend.state_management.state_manager import (
 from src.frontend.visualisation import Graph
 
 
+CAM_WINDOW_NAME = 'Camera Feed'
 INSTRUCTIONS = ('PLACEHOLDER'
                 'TEXT')
 
@@ -18,6 +21,7 @@ class Gui:
     buttons = None
     log_list = None
     logs = None
+    show_cam_view = None
 
     def __init__(self, root, state_manager: Manager, vis: Graph):
         self.root = root
@@ -25,6 +29,7 @@ class Gui:
         self.root.geometry("1200x400")
         self.state_manager = state_manager
         self.vis = vis
+        self.show_cam_view = False
         # left column; control
         control_frame = tk.Frame(root)
         control_frame.grid(row=0, column=0, padx=10, pady=10)
@@ -40,9 +45,13 @@ class Gui:
         btn_act = tk.Button(control_frame, text='ACTIVE', width=10, command=state_manager.active)
         btn_act.grid(row=0, column=4, padx=2)
         self.buttons = (btn_off, btn_sby, btn_cal, btn_rdy, btn_act)
-        # show graph button
-        vis_button = tk.Button(root, text="System Visualisation", command=vis.show)
-        vis_button.grid(row=1, column=0, pady=10)
+        # show graph button / show cams button
+        vis_frame = tk.Frame(root)
+        vis_frame.grid(row=1, column=0, padx=10, pady=10)
+        vis_button = tk.Button(vis_frame, text="System Visualisation", command=vis.show)
+        vis_button.grid(row=0, column=0, padx=10)
+        cam_button = tk.Button(vis_frame, text="Cam View", command=self.toggle_cam_view)
+        cam_button.grid(row=0, column=1, padx=10)
         # show instructions button
         instructions_button = tk.Button(root, text="Instructions", command=self.open_instructions)
         instructions_button.grid(row=2, column=0, pady=10)
@@ -66,6 +75,26 @@ class Gui:
         self.log_list.insert(0, log)
         self.log_list.itemconfig(0, {'bg': 'yellow'})
         self.root.after(1000, self.clear_log_highlight)
+
+    def toggle_cam_view(self):
+        """Toggle showing view of cameras in a window to the user.
+        """
+        def safe_close_cam_window():
+            try:
+                cv2.destroyWindow(CAM_WINDOW_NAME)
+            except cv2.error:
+                pass  # Ignore if already closed or not created
+        self.show_cam_view = not self.show_cam_view
+        # Defer window close to avoid freezing
+        if not self.show_cam_view:
+            self.root.after(100, safe_close_cam_window)
+
+    def cam_feed(self, frame: ndarray):
+        """Sets image to show for camera visualisation.
+        """
+        if self.show_cam_view:
+            cv2.imshow(CAM_WINDOW_NAME, frame)
+            cv2.waitKey(1)
 
     def clear_log_highlight(self):
         """Remove all highlights after 1 second.
