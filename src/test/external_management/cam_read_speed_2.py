@@ -3,11 +3,11 @@ from time import monotonic, sleep
 
 INDEX = 1
 variables = {
-    'exposure': -5.0,  # default: -4.0
+    'exposure': -6.0,  # default: -4.0
     'backend': cv2.CAP_DSHOW,  # default CAP_ANY
     'buffer': -1.0,  # default: -1.0
-    'width': 640.0,  # default: 640.0
-    'height': 480.0,  # default: 480.0
+    'width': 20.0,  # default: 640.0
+    'height': 20.0,  # default: 480.0
 }
 CV_VARIABLES = {
     'exposure': cv2.CAP_PROP_EXPOSURE,
@@ -49,6 +49,7 @@ for attr in CV_VARIABLES.keys():
 print('\n-- New Capture Info --')
 for attr in CV_VARIABLES.keys():
     cap.set(CV_VARIABLES[attr], variables[attr])
+for attr in CV_VARIABLES.keys():
     print(f'{attr}: {cap.get(CV_VARIABLES[attr])}')
 # video feed
 update_freq = 10

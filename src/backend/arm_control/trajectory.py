@@ -20,6 +20,7 @@ def simple_trajectory(location: numpy.typing.NDArray[numpy.float64]) -> numpy.ty
     """Exaggerates position of object to force larger response from arm.
     :return: New exaggerated location
     """
-    location[0] = location[0] * 2
-    location[2] = location[2] * 1.5
+    location[0] = location[0]
+    location[1] = location[1]
+    location[2] = location[2] - 0.25
     return location

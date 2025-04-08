@@ -36,18 +36,20 @@ def find_red_stick_center_orientation(image):
         center = (int(rect[0][0]), int(rect[0][1]))  # x, y
         angle = rect[2]  # Rotation angle
 
-        return center, angle, box
+        return center, angle, box, mask
     else:
-        return None, None, None
+        return None, None, None, None
 
 # Example usage with webcam
-cap = cv2.VideoCapture(0)  # Open webcam
+cap = cv2.VideoCapture(1, cv2.CAP_DSHOW)  # Open webcam
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 20)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 20)
 while True:
     ret, frame = cap.read()
     if not ret:
         break
 
-    center, angle, box = find_red_stick_center_orientation(frame)
+    center, angle, box, mask_frame = find_red_stick_center_orientation(frame)
 
     if center:
         # Draw bounding box
@@ -60,7 +62,7 @@ while True:
         cv2.putText(frame, f"Angle: {int(angle)} deg", (center[0] + 10, center[1] - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
 
-    cv2.imshow("Frame", frame)
+        cv2.imshow("Frame", mask_frame)
 
     if cv2.waitKey(1) & 0xFF == ord('q'):  # Press 'q' to exit
         break

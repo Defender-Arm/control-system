@@ -2,13 +2,17 @@ from threading import Thread
 import tkinter as tk
 
 from src.backend.arm_control.op_loop import operation_loop
-from src.backend.external_management.connections import Ext
+from src.backend.external_management.connections import Ext, is_arduino_connected
 from src.backend.state_management.state_manager import Manager
 from src.frontend.visualisation import Graph
 from src.frontend.gui import Gui
 
 
 if __name__ == '__main__':
+    # pre-check
+    if not is_arduino_connected():
+        print('Please connect Arduino')
+        exit(1)
     # create instances
     state_manager = Manager()
     connection_manager = Ext()

@@ -5,7 +5,7 @@ from src.backend.error.standby_transition import StandbyTransition
 
 
 MAX_TIME = 0.2  # s
-MAX_DIST = 1  # m
+MAX_DIST = 0.8  # m
 
 
 def verify_track(history: List[Tuple[float, Tuple[float, float, float]]]) -> None:

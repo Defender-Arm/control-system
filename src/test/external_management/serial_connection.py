@@ -25,7 +25,7 @@ def send_command(state, base, elbow, wrist):
         if ack_int != 0:
             print(f"Warning: Unexpected response from Arduino: {ack}")
         time.sleep(0.1)  # Small delay
-    except:
+    except serial.serialutil.SerialException:
         print("Serial timeout, resetting connection...")
         ser.close()
         time.sleep(1)
@@ -40,9 +40,27 @@ ser = serial.Serial(PORT, BAUD_RATE, timeout=1)
 
 time.sleep(2)
 
+#while True:
+#    print(f'\r{check_for_port(PORT)}', end='')
+try:
+    serial.Serial(PORT, BAUD_RATE, timeout=1).close()
+    print('Port not taken')
+except serial.serialutil.SerialException:
+    print('Port taken')
+print('Unplug now')
 while check_for_port(PORT):
-    send_command(1, 0, 0, 0)
-    time.sleep(0.5)
+    #send_command(1, 0, 0, 0)
+    time.sleep(0.1)
+print('Port lost; replug')
+while not check_for_port(PORT):
+    time.sleep(0.1)
+print('Port recovered; testing...')
+try:
+    serial.Serial(PORT, BAUD_RATE, timeout=1).close()
+    print('Port not taken')
+except serial.serialutil.SerialException:
+    print('Port taken')
+print(send_command(1,0,0,0))
 
 ser.close()
 print(ser.is_open)

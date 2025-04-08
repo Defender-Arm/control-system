@@ -12,8 +12,8 @@ from src.backend.state_management.state_manager import State
 
 LEFT_CAM_INDEX = 1
 RIGHT_CAM_INDEX = 2
-LEFT_CAM_OFFSET = (0.3, 0.0, 0.0)  # TODO m from origin
-LEFT_CAM_ANGLES = (0, pi/8)  # TODO rad from origin
+LEFT_CAM_OFFSET = (0.42, 0.0, 0.0)
+LEFT_CAM_ANGLES = (-pi/8, pi/8)
 CAM_FOV = 70.0 * 2*pi / 360
 SERIAL_PORT = 'COM4'
 SERIAL_BAUD_RATE = 115200
@@ -49,7 +49,12 @@ class Ext:
         """Opens connection to cameras.
         """
         self._left_cam = cv2.VideoCapture(LEFT_CAM_INDEX, cv2.CAP_DSHOW)
+        # set to 160x120; trying to set directly those values causes slowdowns (why? idk)
+        self._left_cam.set(cv2.CAP_PROP_FRAME_WIDTH, 20)
+        self._left_cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 20)
         self._right_cam = cv2.VideoCapture(RIGHT_CAM_INDEX, cv2.CAP_DSHOW)
+        self._right_cam.set(cv2.CAP_PROP_FRAME_WIDTH, 20)
+        self._right_cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 20)
         self.cam_res = (self._left_cam.get(cv2.CAP_PROP_FRAME_WIDTH),
                         self._left_cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
@@ -71,6 +76,8 @@ class Ext:
         """
         if self.ignore_motors:
             return
+        if not is_arduino_connected():
+            raise StandbyTransition(f'Could not connect to arduino, {SERIAL_PORT} not found')
         self._arduino = serial.Serial(SERIAL_PORT, SERIAL_BAUD_RATE, timeout=1)
         sleep(2)
 
@@ -90,8 +97,15 @@ class Ext:
             raise StandbyTransition(f'Left camera {LEFT_CAM_INDEX} is not open')
         if not self._right_cam or not self._right_cam.isOpened():
             raise StandbyTransition(f'Right camera {RIGHT_CAM_INDEX} is not open')
-        if not self.ignore_motors and (not self._arduino or not is_arduino_connected()):
-            raise StandbyTransition(f'Arduino is not connected')
+        if not self.ignore_motors:
+            if not self._arduino or not is_arduino_connected():
+                raise StandbyTransition(f'Arduino is not connected')
+            try:
+                serial.Serial(SERIAL_PORT, SERIAL_BAUD_RATE, timeout=1).close()
+                raise StandbyTransition(f'Arduino is not connected')
+            except serial.serialutil.SerialException:
+                # serial port is taken
+                pass
 
     def take_photos(self) -> Tuple[ndarray, ndarray]:
         """Gets snapshot from both cameras.
@@ -116,11 +130,19 @@ class Ext:
         """
         if self.ignore_motors:
             return
+        if not is_arduino_connected():
+            if state > State.STANDBY:
+                raise StandbyTransition(f'Arduino disconnected; unable to send over serial')
+            else:
+                return
         command = f'{state.value} {angles[0]} {angles[1]} {angles[2]}\n'
         try:
             self._arduino.flush()
             self._arduino.write(command.encode('utf-8'))
-        except serial.serialutil.SerialException:
+            return
+        except (serial.serialutil.SerialException, serial.serialutil.SerialTimeoutException):
+            pass
+        if state != State.STANDBY:
             raise StandbyTransition(f'Error sending message "{command.strip()}" over serial')
 
     def recv_serial(self):
@@ -133,6 +155,8 @@ class Ext:
             msg = self._arduino.readline().decode('utf-8').strip()
         except serial.serialutil.SerialException:
             raise StandbyTransition(f'Error reading serial')
+        if len(msg) == 0:
+            return
         error_val = int(msg, 2)
         if error_val != 0:
             raise StandbyTransition(f'Serial indicated error (error code: {error_val})')
