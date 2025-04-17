@@ -23,6 +23,7 @@ class Gui:
     buttons = None
     log_list = None
     logs = None
+    calibration_complete = False
     
     def __init__(self, root, state_manager: Manager, vis: Graph):
         self.root = root
@@ -37,6 +38,7 @@ class Gui:
 
         self.state_manager = state_manager
         self.vis = vis
+        self.calibration_complete = False
 
         # Create main container with padding
         self.main_container = tk.Frame(root, bg='#f0f0f0', padx=20, pady=20)
@@ -102,19 +104,100 @@ class Gui:
         instructions_button.pack(pady=10)
 
     def setup_visualization_panel(self):
-        """Setup the visualization panel"""
+        """Setup the visualization panel with camera feeds and trajectory visualization"""
         vis_frame = tk.LabelFrame(self.left_frame, text="Visualization", 
                                 font=self.title_font, bg='#f0f0f0', fg='#2c3e50',
                                 padx=10, pady=10)
         vis_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Create a canvas for visualization
-        canvas = tk.Canvas(vis_frame, bg='black', width=500, height=400)
-        canvas.pack(fill=tk.BOTH, expand=True, pady=10)
+        # Create a canvas with scrollbar for the entire visualization panel
+        canvas = tk.Canvas(vis_frame, bg='#f0f0f0', highlightthickness=0)
+        scrollbar = ttk.Scrollbar(vis_frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg='#f0f0f0')
 
-        # Add some demo content to the canvas
-        canvas.create_text(250, 200, text="3D Visualization\nDemo", 
-                         fill='white', font=self.title_font)
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Create a frame to hold both camera feeds
+        camera_frame = tk.Frame(scrollable_frame, bg='#f0f0f0')
+        camera_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+
+        # Left camera feed
+        left_camera_frame = tk.LabelFrame(camera_frame, text="Camera 1", 
+                                        font=self.button_font, bg='#f0f0f0', fg='#2c3e50',
+                                        padx=5, pady=5)
+        left_camera_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+        
+        self.left_camera_canvas = tk.Canvas(left_camera_frame, bg='black', width=400, height=300)
+        self.left_camera_canvas.pack(fill=tk.BOTH, expand=True)
+        
+        # Right camera feed
+        right_camera_frame = tk.LabelFrame(camera_frame, text="Camera 2", 
+                                         font=self.button_font, bg='#f0f0f0', fg='#2c3e50',
+                                         padx=5, pady=5)
+        right_camera_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(5, 0))
+        
+        self.right_camera_canvas = tk.Canvas(right_camera_frame, bg='black', width=400, height=300)
+        self.right_camera_canvas.pack(fill=tk.BOTH, expand=True)
+
+        # Trajectory visualization
+        trajectory_frame = tk.LabelFrame(scrollable_frame, text="Trajectory", 
+                                       font=self.button_font, bg='#f0f0f0', fg='#2c3e50',
+                                       padx=5, pady=5)
+        trajectory_frame.pack(fill=tk.BOTH, expand=True)
+        
+        self.trajectory_canvas = tk.Canvas(trajectory_frame, bg='black', width=800, height=200)
+        self.trajectory_canvas.pack(fill=tk.BOTH, expand=True)
+
+        # Pack the canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # Bind mouse wheel to scroll
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+    def _update_visualization(self):
+        """Update the camera feeds and trajectory with placeholder content"""
+        # Clear all canvases
+        self.left_camera_canvas.delete("all")
+        self.right_camera_canvas.delete("all")
+        self.trajectory_canvas.delete("all")
+        
+        # Add placeholder text to both cameras
+        self.left_camera_canvas.create_text(200, 150, 
+                                          text="Camera 1 Feed\n(Placeholder)",
+                                          fill='white', font=self.title_font,
+                                          justify=tk.CENTER)
+        
+        self.right_camera_canvas.create_text(200, 150,
+                                           text="Camera 2 Feed\n(Placeholder)",
+                                           fill='white', font=self.title_font,
+                                           justify=tk.CENTER)
+        
+        # Add state indicator to both feeds
+        state_text = f"Current State: {self.state_manager.current_state.name}"
+        self.left_camera_canvas.create_text(200, 250, text=state_text,
+                                          fill='white', font=self.button_font)
+        self.right_camera_canvas.create_text(200, 250, text=state_text,
+                                           fill='white', font=self.button_font)
+
+        # Add trajectory visualization
+        # Draw grid
+        for i in range(0, 800, 50):
+            self.trajectory_canvas.create_line(i, 0, i, 200, fill='#333333', width=1)
+        for i in range(0, 200, 20):
+            self.trajectory_canvas.create_line(0, i, 800, i, fill='#333333', width=1)
+
+        # Add axis labels
+        self.trajectory_canvas.create_text(400, 190, text="X", fill='white', font=self.button_font)
+        self.trajectory_canvas.create_text(790, 100, text="Y", fill='white', font=self.button_font)
 
     def setup_log_panel(self):
         """Setup the log panel with system messages"""
@@ -162,16 +245,44 @@ class Gui:
         
         # Add log entry for state change with success tag
         self.add_log(f"System state changed to: {state.name}", 'success')
+        
+        # Handle calibration state
+        if state == State.CALIBRATE:
+            self.calibration_complete = False
+            # Simulate calibration process
+            self.root.after(2000, self._calibration_complete)
+        elif state == State.READY and not self.calibration_complete:
+            self.add_log("Calibration must be completed before setting to READY", 'error')
+            return False
+        elif state == State.READY:
+            self.calibration_complete = False  # Reset for next time
+            return True
+            
+        return True
+        
+    def _calibration_complete(self):
+        """Handle calibration completion"""
+        self.calibration_complete = True
+        self.add_log("Calibration completed successfully", 'success')
+        self.add_log("Please set system to READY state to continue", 'info')
 
     def add_log(self, log: str, tag='info'):
         """Add an entry to the log with appropriate styling"""
         self.log_list.config(state=tk.NORMAL)
+        
+        # Configure the text widget to maintain its size
+        self.log_list.config(width=40, height=20)
+        
         self.log_list.insert('1.0', log + '\n')
         self.log_list.tag_add('highlight', '1.0', '2.0')
         self.log_list.tag_add(tag, '1.0', '2.0')
         self.log_list.see('1.0')  # Auto-scroll to the latest entry
         self.log_list.config(state=tk.DISABLED)
         self.root.after(1000, self.clear_log_highlight)
+        
+        # Update visualization when state changes
+        if "state changed to" in log:
+            self._update_visualization()
 
     def clear_log_highlight(self):
         """Remove highlight after 1 second"""
