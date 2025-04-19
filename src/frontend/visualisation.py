@@ -23,6 +23,7 @@ class Graph:
     cams = None
     cam_scatter = None
     obj_scatter = None
+    obj_scatter2 = None
     ray_lines = None
 
     def __init__(self, root: Tk):
@@ -33,12 +34,18 @@ class Graph:
         self.cams = np.array([LEFT_CAM_OFFSET, (-LEFT_CAM_OFFSET[0], LEFT_CAM_OFFSET[1], LEFT_CAM_OFFSET[2])])
         self.cam_scatter.set_data(pos=self.cams, face_color='black', size=5)
         self.obj_scatter = scene.visuals.Markers()
+        self.obj_scatter2 = scene.visuals.Markers()
         self.ray_lines = [scene.visuals.Line(color='blue', width=2), scene.visuals.Line(color='blue', width=2)]
 
     def set_obj(self, location: np.typing.NDArray[np.float64]):
         """Set new location for object in visualisation.
         """
-        self.obj_scatter.set_data(pos=np.array([location]), face_color='red', size=10)
+        self.obj_scatter.set_data(pos=np.array([location]), face_color='gray', size=10)
+
+    def set_real_obj(self, location: np.typing.NDArray[np.float64]):
+        """Set new location for true object in visualisation.
+        """
+        #self.obj_scatter2.set_data(pos=np.array([location]), face_color='red', size=10)
 
     def set_cam_rays(self, left_ray_angles: Tuple[float, float], right_ray_angles: Tuple[float, float]):
         """Set where cameras see object. Rays take xy and yz angles as input.
@@ -72,6 +79,7 @@ class Graph:
         # Add points + lines
         view.add(self.cam_scatter)
         view.add(self.obj_scatter)
+        #view.add(self.obj_scatter2)
         if self.ray_lines:
             view.add(self.ray_lines[0])
             view.add(self.ray_lines[1])

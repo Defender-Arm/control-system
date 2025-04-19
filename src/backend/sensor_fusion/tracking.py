@@ -11,11 +11,16 @@ import numpy
 from time import monotonic
 from typing import List, Optional, Tuple
 
-
-LOWER_RED_1 = numpy.array([0, 120, 70])
-UPPER_RED_1 = numpy.array([10, 255, 255])
-LOWER_RED_2 = numpy.array([170, 120, 70])
-UPPER_RED_2 = numpy.array([180, 255, 255])
+H_LOW = 170
+H_HIGH = 10
+S_LOW = 120
+S_HIGH = 255
+V_LOW = 100
+V_HIGH = 255
+LOWER_RED_1 = numpy.array([0, S_LOW, V_LOW])
+UPPER_RED_1 = numpy.array([H_HIGH, S_HIGH, V_HIGH])
+LOWER_RED_2 = numpy.array([H_LOW, S_LOW, V_LOW])
+UPPER_RED_2 = numpy.array([180, S_HIGH, V_HIGH])
 
 
 _history = []
@@ -107,10 +112,9 @@ def locate_object(
     q1 = numpy.array(p1) + t1 * numpy.array(d1)
     q2 = numpy.array(p2) + t2 * numpy.array(d2)
     distance = dist(q1, q2)
-    if distance > 0.3:
-        raise StandbyTransition(f'Cameras localize object to farther than 0.3m apart ({distance}m)')
+    if distance > 0.9:
+        raise StandbyTransition(f'Cameras localize object to farther than 0.9m apart ({distance}m)')
     location = (q1 + q2) / 2
-    store_location(monotonic(), location)
     return location
 
 

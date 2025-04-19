@@ -1,8 +1,9 @@
 from datetime import datetime
 from time import monotonic, sleep
+from math import dist
 
 from src.backend.error.standby_transition import StandbyTransition
-from src.backend.external_management.connections import Ext
+from src.backend.external_management.connections import Ext, CAM_FOV
 from src.backend.sensor_fusion.tracking import (
     find_in_image, create_ray, locate_object, store_location, get_location_history, clear_location_history
 )
@@ -99,11 +100,13 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                         verify_track(get_location_history())
                         distance += location[1]  # y coord; distance from arm front
                     # if object behind arm, swap cams
-                    if distance < 0:
+                    if center_l[0] - connection_manager.cam_res[0] < 0 < center_r[0] - connection_manager.cam_res[0]:
+                        print('swap')
+                        clear_location_history()
                         connection_manager.swap_cameras()
                     # check mechanical calibration
                     connection_manager.send_serial(State.CALIBRATE)
-                    sleep(6)
+                    #sleep(6)
                     connection_manager.recv_serial()
                     state_manager.ready()
                     connection_manager.send_serial(State.READY)
@@ -125,9 +128,14 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                 active_timer.split()
                 location = locate_object(ray_l, ray_r)
                 active_timer.split()
+                real_location = location
+                #if dist((0, 0, 0), tuple(location)) < 0.75:
+                #    location = get_location_history()[0][0]  # most recent location
+                #    clear_location_history()
                 store_location(monotonic(), location)
                 active_timer.split()
                 vis.set_obj(location)
+                vis.set_real_obj(real_location)
                 active_timer.split()
                 verify_track(get_location_history())
                 active_timer.split()

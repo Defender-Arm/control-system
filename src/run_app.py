@@ -10,12 +10,12 @@ from src.frontend.gui import Gui
 
 if __name__ == '__main__':
     # pre-check
-    if not is_arduino_connected():
-        print('Please connect Arduino')
-        exit(1)
+    #if not is_arduino_connected():
+    #    print('Please connect Arduino')
+    #    exit(1)
     # create instances
     state_manager = Manager()
-    connection_manager = Ext()
+    connection_manager = Ext(ignore_motors=False)
     root = tk.Tk()
     vis = Graph(root)
     gui = Gui(root, state_manager, vis)
