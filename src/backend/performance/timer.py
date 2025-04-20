@@ -2,7 +2,12 @@ from time import monotonic
 from typing import List, Optional
 from os.path import dirname, realpath, join
 
-from src.backend.performance.analyse_log import print_loop_time
+# Import is now conditional
+try:
+    from src.backend.performance.analyse_log import print_loop_time
+    PERFORMANCE_LOGGING_ENABLED = True
+except ImportError:
+    PERFORMANCE_LOGGING_ENABLED = False
 
 PERFORMANCE_LOG_NAME = 'performance'
 
@@ -17,7 +22,7 @@ class Timer:
         self.print_counter = 0
         self.times = None
         self.segment = 0
-        self.log = log_name is not None
+        self.log = log_name is not None and PERFORMANCE_LOGGING_ENABLED
         if self.log:
             self.log_file = open(join(dirname(realpath(__file__)), log_name + '.log'), 'w')
             self.log_file.write(' '.join(self.sections) + '\n')
@@ -27,7 +32,7 @@ class Timer:
         """
         if self.times is not None:
             # print old times
-            if self.print_counter + 1 == self.verbose_freq:
+            if self.print_counter + 1 == self.verbose_freq and PERFORMANCE_LOGGING_ENABLED:
                 self.print_counter = 0
                 print_loop_time(self.sections, self.times)
             else:

@@ -5,20 +5,22 @@ from typing import List
 def print_analysis(section_title: str, times: List[float]):
     """Prints statistics about a timed section.
     """
-    print(f'{section_title + ' ':=<40}')
+    print(f'{section_title:=<40}')
     print(f'Minimum: {min(times):.3f}ms')
     print(f'Average: {sum(times) / len(times):.3f}ms')
     print(f'Maximum: {max(times):.3f}ms')
 
 
-def print_loop_time(section_titles: List[str], times: List[float]):
-    """Prints times for each section in a given loop.
-    """
-    tn = len(times)
-    to_print = []
-    for t in range(1, tn):
-        to_print.append(f'{section_titles[t-1]}:{(times[t]-times[t-1])*1000:06.2f}ms')
-    print(f'{' '.join(to_print)} | {(times[tn-1]-times[0])*1000:06.2f}ms')
+def print_loop_time(sections, times):
+    """Print the time taken for each section of the loop."""
+    print('\nLoop timing analysis:')
+    print('=' * 40)
+    total_time = 0
+    for section_title, time in zip(sections, times):
+        print(f'{section_title:<40} {time:.3f} s')
+        total_time += time
+    print('=' * 40)
+    print(f'Total time: {total_time:.3f} s')
 
 
 if __name__ == '__main__':
