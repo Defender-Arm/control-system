@@ -84,29 +84,18 @@ class Gui:
         camera_frame = tk.Frame(right_panel)
         camera_frame.pack(fill=tk.BOTH, expand=True, pady=5)
         
-        # Create frames for raw and mask views for each camera
+        # Create frames for camera views
         self.camera_frames = []
         for i in range(2):
             camera_container = tk.Frame(camera_frame)
             camera_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
             
-            # Raw view
-            raw_label = tk.Label(camera_container, text="Raw View", 
-                               font=('Arial', 12), bg='#333333', fg='white')
-            raw_label.pack(fill=tk.X)
-            raw_frame = tk.Label(camera_container, text="Camera not available", 
-                               font=('Arial', 14), bg='#333333', fg='white')
-            raw_frame.pack(fill=tk.BOTH, expand=True)
+            # Camera view
+            frame = tk.Label(camera_container, text="Camera not available", 
+                           font=('Arial', 14), bg='#333333', fg='white')
+            frame.pack(fill=tk.BOTH, expand=True)
             
-            # Mask view
-            mask_label = tk.Label(camera_container, text="Mask View", 
-                                font=('Arial', 12), bg='#333333', fg='white')
-            mask_label.pack(fill=tk.X)
-            mask_frame = tk.Label(camera_container, text="Camera not available", 
-                                font=('Arial', 14), bg='#333333', fg='white')
-            mask_frame.pack(fill=tk.BOTH, expand=True)
-            
-            self.camera_frames.append((raw_frame, mask_frame))
+            self.camera_frames.append(frame)
         
         # Trajectory visualization
         trajectory_frame = tk.Frame(right_panel)
@@ -158,7 +147,7 @@ class Gui:
                     if center2 is not None:
                         cv2.circle(frame2, center2, 5, (255, 0, 0), -1)
                     
-                    # Convert to PhotoImage for raw view
+                    # Convert to PhotoImage for display
                     frame1_rgb = cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB)
                     frame2_rgb = cv2.cvtColor(frame2, cv2.COLOR_BGR2RGB)
                     
@@ -172,39 +161,12 @@ class Gui:
                     photo1 = ImageTk.PhotoImage(image=img1)
                     photo2 = ImageTk.PhotoImage(image=img2)
                     
-                    # Update raw views
-                    self.camera_frames[0][0].configure(image=photo1)
-                    self.camera_frames[1][0].configure(image=photo2)
+                    # Update camera views
+                    self.camera_frames[0].configure(image=photo1)
+                    self.camera_frames[1].configure(image=photo2)
                     
-                    self.camera_frames[0][0].image = photo1
-                    self.camera_frames[1][0].image = photo2
-                    
-                    # Get mask views from find_in_image
-                    # Note: This assumes find_in_image returns the mask as well
-                    # You may need to modify find_in_image to return the mask
-                    mask1 = find_in_image(frame1, return_mask=True)[2]
-                    mask2 = find_in_image(frame2, return_mask=True)[2]
-                    
-                    # Convert masks to RGB for display
-                    mask1_rgb = cv2.cvtColor(mask1, cv2.COLOR_GRAY2RGB)
-                    mask2_rgb = cv2.cvtColor(mask2, cv2.COLOR_GRAY2RGB)
-                    
-                    mask_img1 = Image.fromarray(mask1_rgb)
-                    mask_img2 = Image.fromarray(mask2_rgb)
-                    
-                    # Resize masks
-                    mask_img1 = mask_img1.resize((400, 300))
-                    mask_img2 = mask_img2.resize((400, 300))
-                    
-                    mask_photo1 = ImageTk.PhotoImage(image=mask_img1)
-                    mask_photo2 = ImageTk.PhotoImage(image=mask_img2)
-                    
-                    # Update mask views
-                    self.camera_frames[0][1].configure(image=mask_photo1)
-                    self.camera_frames[1][1].configure(image=mask_photo2)
-                    
-                    self.camera_frames[0][1].image = mask_photo1
-                    self.camera_frames[1][1].image = mask_photo2
+                    self.camera_frames[0].image = photo1
+                    self.camera_frames[1].image = photo2
                     
                 except Exception as e:
                     self.add_log(f"Error processing frames: {str(e)}")
