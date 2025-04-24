@@ -36,16 +36,16 @@ class Gui:
         self.vis = vis
         
         # Create main container
-        self.main_container = tk.Frame(root)
-        self.main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        main_container = tk.Frame(root)
+        main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
         # Left panel for controls and logs
-        self.left_panel = tk.Frame(self.main_container)
-        self.left_panel.pack(side=tk.LEFT, fill=tk.Y, padx=5)
+        left_panel = tk.Frame(main_container)
+        left_panel.pack(side=tk.LEFT, fill=tk.Y, padx=5)
         
         # Control panel
-        self.control_frame = tk.Frame(self.left_panel)
-        self.control_frame.pack(fill=tk.X, pady=5)
+        control_frame = tk.Frame(left_panel)
+        control_frame.pack(fill=tk.X, pady=5)
         
         # State buttons with consistent styling
         button_styles = {
@@ -66,46 +66,46 @@ class Gui:
         
         self.buttons = {}
         for i, (text, command) in enumerate(button_commands.items()):
-            btn = tk.Button(self.control_frame, text=text, width=10, command=command,
+            btn = tk.Button(control_frame, text=text, width=10, command=command,
                           **button_styles[text])
             btn.grid(row=0, column=i, padx=2)
             self.buttons[text] = btn
         
         # Log panel
-        self.log_frame = tk.Frame(self.left_panel)
-        self.log_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        log_frame = tk.Frame(left_panel)
+        log_frame.pack(fill=tk.BOTH, expand=True, pady=5)
         
-        self.log_list = tk.Listbox(self.log_frame, width=50, height=20,
+        self.log_list = tk.Listbox(log_frame, width=50, height=20,
                                   font=('Courier', 10))
         self.log_list.pack(fill=tk.BOTH, expand=True)
         
         # Right panel for camera feeds and trajectory
-        self.right_panel = tk.Frame(self.main_container)
-        self.right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5)
+        right_panel = tk.Frame(main_container)
+        right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5)
         
         # Camera controls frame
-        self.camera_controls = tk.Frame(self.right_panel)
-        self.camera_controls.pack(fill=tk.X, pady=5)
+        camera_controls = tk.Frame(right_panel)
+        camera_controls.pack(fill=tk.X, pady=5)
         
         # HSV threshold controls
         self.create_threshold_controls()
         
         # Camera feeds
-        self.camera_frame = tk.Frame(self.right_panel)
-        self.camera_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        camera_frame = tk.Frame(right_panel)
+        camera_frame.pack(fill=tk.BOTH, expand=True, pady=5)
         
         self.camera_frames = []
         for i in range(2):
-            frame = tk.Label(self.camera_frame, text="Camera not available", 
+            frame = tk.Label(camera_frame, text="Camera not available", 
                            font=('Arial', 14), bg='#333333', fg='white')
             frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
             self.camera_frames.append(frame)
         
         # Trajectory visualization
-        self.trajectory_frame = tk.Frame(self.right_panel)
-        self.trajectory_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        trajectory_frame = tk.Frame(right_panel)
+        trajectory_frame.pack(fill=tk.BOTH, expand=True, pady=5)
         
-        self.trajectory_canvas = tk.Canvas(self.trajectory_frame, bg='black')
+        self.trajectory_canvas = tk.Canvas(trajectory_frame, bg='black')
         self.trajectory_canvas.pack(fill=tk.BOTH, expand=True)
         
         # Initialize cameras
@@ -165,9 +165,8 @@ class Gui:
         self.high_V_scale.grid(row=5, column=1, padx=5, pady=2)
         
         # Add update button
-        self.update_thresholds_btn = tk.Button(threshold_frame, text="Update Thresholds", 
-                  command=self.update_thresholds)
-        self.update_thresholds_btn.grid(row=6, column=0, columnspan=2, pady=5)
+        tk.Button(threshold_frame, text="Update Thresholds", 
+                  command=self.update_thresholds).grid(row=6, column=0, columnspan=2, pady=5)
 
     def update_cameras(self):
         if self.cap1 is not None and self.cap2 is not None:
