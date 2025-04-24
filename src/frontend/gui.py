@@ -109,11 +109,11 @@ class Gui:
             self.cap1 = cv2.VideoCapture(1, cv2.CAP_DSHOW)
             self.cap2 = cv2.VideoCapture(2, cv2.CAP_DSHOW)
             
-            # Set lower resolution for faster processing
-            self.cap1.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            self.cap1.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-            self.cap2.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            self.cap2.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            # Set very low resolution for faster processing (like in mask2.py)
+            self.cap1.set(cv2.CAP_PROP_FRAME_WIDTH, 20)
+            self.cap1.set(cv2.CAP_PROP_FRAME_HEIGHT, 20)
+            self.cap2.set(cv2.CAP_PROP_FRAME_WIDTH, 20)
+            self.cap2.set(cv2.CAP_PROP_FRAME_HEIGHT, 20)
             
             if not self.cap1.isOpened() or not self.cap2.isOpened():
                 self.add_log("Warning: One or more cameras not available")
