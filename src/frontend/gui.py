@@ -7,6 +7,7 @@ from src.backend.state_management.state_manager import (
     Manager, MANUAL_TRANSITION_DICT, State
 )
 from src.frontend.visualisation import Graph
+from src.backend.sensor_fusion.tracking import find_in_image
 
 
 INSTRUCTIONS = ('PLACEHOLDER'
@@ -24,16 +25,6 @@ class Gui:
     camera_frames = None
     trajectory_canvas = None
     
-    # HSV thresholds for object detection
-    low_H = 170
-    low_S = 120
-    low_V = 100
-    high_H = 10
-    high_S = 255
-    high_V = 255
-    max_value = 255
-    max_value_H = 360//2
-
     def __init__(self, root, state_manager: Manager, vis: Graph):
         self.root = root
         self.root.title("Arm Control")
@@ -89,27 +80,33 @@ class Gui:
         right_panel = tk.Frame(main_container)
         right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5)
         
-        # Camera controls frame
-        camera_controls = tk.Frame(right_panel)
-        camera_controls.pack(fill=tk.X, pady=5)
-        
-        # HSV threshold controls
-        threshold_frame = tk.LabelFrame(camera_controls, text="HSV Threshold Controls")
-        threshold_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Create trackbars for HSV thresholds
-        self.create_threshold_controls(threshold_frame)
-        
         # Camera feeds
         camera_frame = tk.Frame(right_panel)
         camera_frame.pack(fill=tk.BOTH, expand=True, pady=5)
         
+        # Create frames for raw and mask views for each camera
         self.camera_frames = []
         for i in range(2):
-            frame = tk.Label(camera_frame, text="Camera not available", 
-                           font=('Arial', 14), bg='#333333', fg='white')
-            frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
-            self.camera_frames.append(frame)
+            camera_container = tk.Frame(camera_frame)
+            camera_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
+            
+            # Raw view
+            raw_label = tk.Label(camera_container, text="Raw View", 
+                               font=('Arial', 12), bg='#333333', fg='white')
+            raw_label.pack(fill=tk.X)
+            raw_frame = tk.Label(camera_container, text="Camera not available", 
+                               font=('Arial', 14), bg='#333333', fg='white')
+            raw_frame.pack(fill=tk.BOTH, expand=True)
+            
+            # Mask view
+            mask_label = tk.Label(camera_container, text="Mask View", 
+                                font=('Arial', 12), bg='#333333', fg='white')
+            mask_label.pack(fill=tk.X)
+            mask_frame = tk.Label(camera_container, text="Camera not available", 
+                                font=('Arial', 14), bg='#333333', fg='white')
+            mask_frame.pack(fill=tk.BOTH, expand=True)
+            
+            self.camera_frames.append((raw_frame, mask_frame))
         
         # Trajectory visualization
         trajectory_frame = tk.Frame(right_panel)
@@ -122,6 +119,12 @@ class Gui:
         try:
             self.cap1 = cv2.VideoCapture(1, cv2.CAP_DSHOW)
             self.cap2 = cv2.VideoCapture(2, cv2.CAP_DSHOW)
+            
+            # Set lower resolution for faster processing
+            self.cap1.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            self.cap1.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            self.cap2.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            self.cap2.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             
             if not self.cap1.isOpened() or not self.cap2.isOpened():
                 self.add_log("Warning: One or more cameras not available")
@@ -138,128 +141,73 @@ class Gui:
         self.update_cameras()
         self.update_trajectory()
 
-    def create_threshold_controls(self, parent):
-        # Low H threshold
-        tk.Label(parent, text="Low H").grid(row=0, column=0, padx=5, pady=2)
-        self.low_H_scale = tk.Scale(parent, from_=0, to=self.max_value_H,
-                                  orient=tk.HORIZONTAL, command=self.on_low_H_thresh_trackbar)
-        self.low_H_scale.set(self.low_H)
-        self.low_H_scale.grid(row=0, column=1, padx=5, pady=2)
-        
-        # High H threshold
-        tk.Label(parent, text="High H").grid(row=0, column=2, padx=5, pady=2)
-        self.high_H_scale = tk.Scale(parent, from_=0, to=self.max_value_H,
-                                   orient=tk.HORIZONTAL, command=self.on_high_H_thresh_trackbar)
-        self.high_H_scale.set(self.high_H)
-        self.high_H_scale.grid(row=0, column=3, padx=5, pady=2)
-        
-        # Low S threshold
-        tk.Label(parent, text="Low S").grid(row=1, column=0, padx=5, pady=2)
-        self.low_S_scale = tk.Scale(parent, from_=0, to=self.max_value,
-                                  orient=tk.HORIZONTAL, command=self.on_low_S_thresh_trackbar)
-        self.low_S_scale.set(self.low_S)
-        self.low_S_scale.grid(row=1, column=1, padx=5, pady=2)
-        
-        # High S threshold
-        tk.Label(parent, text="High S").grid(row=1, column=2, padx=5, pady=2)
-        self.high_S_scale = tk.Scale(parent, from_=0, to=self.max_value,
-                                   orient=tk.HORIZONTAL, command=self.on_high_S_thresh_trackbar)
-        self.high_S_scale.set(self.high_S)
-        self.high_S_scale.grid(row=1, column=3, padx=5, pady=2)
-        
-        # Low V threshold
-        tk.Label(parent, text="Low V").grid(row=2, column=0, padx=5, pady=2)
-        self.low_V_scale = tk.Scale(parent, from_=0, to=self.max_value,
-                                  orient=tk.HORIZONTAL, command=self.on_low_V_thresh_trackbar)
-        self.low_V_scale.set(self.low_V)
-        self.low_V_scale.grid(row=2, column=1, padx=5, pady=2)
-        
-        # High V threshold
-        tk.Label(parent, text="High V").grid(row=2, column=2, padx=5, pady=2)
-        self.high_V_scale = tk.Scale(parent, from_=0, to=self.max_value,
-                                   orient=tk.HORIZONTAL, command=self.on_high_V_thresh_trackbar)
-        self.high_V_scale.set(self.high_V)
-        self.high_V_scale.grid(row=2, column=3, padx=5, pady=2)
-
-    def on_low_H_thresh_trackbar(self, val):
-        self.low_H = int(val)
-        self.low_H_scale.set(self.low_H)
-
-    def on_high_H_thresh_trackbar(self, val):
-        self.high_H = int(val)
-        self.high_H_scale.set(self.high_H)
-
-    def on_low_S_thresh_trackbar(self, val):
-        self.low_S = int(val)
-        self.low_S = min(self.high_S-1, self.low_S)
-        self.low_S_scale.set(self.low_S)
-
-    def on_high_S_thresh_trackbar(self, val):
-        self.high_S = int(val)
-        self.high_S = max(self.high_S, self.low_S+1)
-        self.high_S_scale.set(self.high_S)
-
-    def on_low_V_thresh_trackbar(self, val):
-        self.low_V = int(val)
-        self.low_V = min(self.high_V-1, self.low_V)
-        self.low_V_scale.set(self.low_V)
-
-    def on_high_V_thresh_trackbar(self, val):
-        self.high_V = int(val)
-        self.high_V = max(self.high_V, self.low_V+1)
-        self.high_V_scale.set(self.high_V)
-
-    def process_frame(self, frame):
-        frame_HSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        frame_threshold_1 = cv2.inRange(frame_HSV, (self.low_H, self.low_S, self.low_V), 
-                                      (180, self.high_S, self.high_V))
-        frame_threshold_2 = cv2.inRange(frame_HSV, (0, self.low_S, self.low_V), 
-                                      (self.high_H, self.high_S, self.high_V))
-        frame_threshold = frame_threshold_1 + frame_threshold_2
-
-        kernel = np.ones((5, 5), np.uint8)
-        frame_threshold = cv2.morphologyEx(frame_threshold, cv2.MORPH_CLOSE, kernel)
-        contours, _ = cv2.findContours(frame_threshold, cv2.RETR_EXTERNAL, 
-                                     cv2.CHAIN_APPROX_SIMPLE)
-
-        if contours:
-            largest_contour = max(contours, key=cv2.contourArea)
-            rect = cv2.minAreaRect(largest_contour)
-            box = cv2.boxPoints(rect).astype(int)
-            center = (int(rect[0][0]), int(rect[0][1]))
-            cv2.drawContours(frame, [box], 0, (0, 255, 0), 2)
-            cv2.circle(frame, center, 5, (255, 0, 0), -1)
-        return frame
-
     def update_cameras(self):
         if self.cap1 is not None and self.cap2 is not None:
             ret1, frame1 = self.cap1.read()
             ret2, frame2 = self.cap2.read()
             
             if ret1 and ret2:
-                # Process frames
-                frame1 = self.process_frame(frame1)
-                frame2 = self.process_frame(frame2)
-                
-                # Convert to PhotoImage
-                frame1 = cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB)
-                frame2 = cv2.cvtColor(frame2, cv2.COLOR_BGR2RGB)
-                
-                img1 = Image.fromarray(frame1)
-                img2 = Image.fromarray(frame2)
-                
-                # Resize to fit the display
-                img1 = img1.resize((400, 300))
-                img2 = img2.resize((400, 300))
-                
-                photo1 = ImageTk.PhotoImage(image=img1)
-                photo2 = ImageTk.PhotoImage(image=img2)
-                
-                self.camera_frames[0].configure(image=photo1)
-                self.camera_frames[1].configure(image=photo2)
-                
-                self.camera_frames[0].image = photo1
-                self.camera_frames[1].image = photo2
+                try:
+                    # Process frames using find_in_image
+                    center1, angle1 = find_in_image(frame1)
+                    center2, angle2 = find_in_image(frame2)
+                    
+                    # Draw the results on the frames
+                    if center1 is not None:
+                        cv2.circle(frame1, center1, 5, (255, 0, 0), -1)
+                    if center2 is not None:
+                        cv2.circle(frame2, center2, 5, (255, 0, 0), -1)
+                    
+                    # Convert to PhotoImage for raw view
+                    frame1_rgb = cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB)
+                    frame2_rgb = cv2.cvtColor(frame2, cv2.COLOR_BGR2RGB)
+                    
+                    img1 = Image.fromarray(frame1_rgb)
+                    img2 = Image.fromarray(frame2_rgb)
+                    
+                    # Resize to fit the display
+                    img1 = img1.resize((400, 300))
+                    img2 = img2.resize((400, 300))
+                    
+                    photo1 = ImageTk.PhotoImage(image=img1)
+                    photo2 = ImageTk.PhotoImage(image=img2)
+                    
+                    # Update raw views
+                    self.camera_frames[0][0].configure(image=photo1)
+                    self.camera_frames[1][0].configure(image=photo2)
+                    
+                    self.camera_frames[0][0].image = photo1
+                    self.camera_frames[1][0].image = photo2
+                    
+                    # Get mask views from find_in_image
+                    # Note: This assumes find_in_image returns the mask as well
+                    # You may need to modify find_in_image to return the mask
+                    mask1 = find_in_image(frame1, return_mask=True)[2]
+                    mask2 = find_in_image(frame2, return_mask=True)[2]
+                    
+                    # Convert masks to RGB for display
+                    mask1_rgb = cv2.cvtColor(mask1, cv2.COLOR_GRAY2RGB)
+                    mask2_rgb = cv2.cvtColor(mask2, cv2.COLOR_GRAY2RGB)
+                    
+                    mask_img1 = Image.fromarray(mask1_rgb)
+                    mask_img2 = Image.fromarray(mask2_rgb)
+                    
+                    # Resize masks
+                    mask_img1 = mask_img1.resize((400, 300))
+                    mask_img2 = mask_img2.resize((400, 300))
+                    
+                    mask_photo1 = ImageTk.PhotoImage(image=mask_img1)
+                    mask_photo2 = ImageTk.PhotoImage(image=mask_img2)
+                    
+                    # Update mask views
+                    self.camera_frames[0][1].configure(image=mask_photo1)
+                    self.camera_frames[1][1].configure(image=mask_photo2)
+                    
+                    self.camera_frames[0][1].image = mask_photo1
+                    self.camera_frames[1][1].image = mask_photo2
+                    
+                except Exception as e:
+                    self.add_log(f"Error processing frames: {str(e)}")
         
         self.root.after(30, self.update_cameras)
 
