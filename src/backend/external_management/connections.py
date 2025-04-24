@@ -33,14 +33,16 @@ def is_arduino_connected() -> bool:
 
 class Ext:
 
-    def __init__(self, ignore_motors: bool = False):
+    def __init__(self, ignore_motors: bool = False, ignore_cameras: bool = False):
         """Creates and stores all connections to external devices.
         """
         self._right_cam = None
         self._left_cam = None
         self.cam_res = [0, 0]
         self._arduino = None
-        self.connect_cameras()
+        self.ignore_cameras = ignore_cameras
+        if not self.ignore_cameras:
+            self.connect_cameras()
         self.ignore_motors = ignore_motors
         if not self.ignore_motors:
             self.connect_arduino()
@@ -48,6 +50,8 @@ class Ext:
     def connect_cameras(self):
         """Opens connection to cameras.
         """
+        if self.ignore_cameras:
+            return
         self._left_cam = cv2.VideoCapture(LEFT_CAM_INDEX, cv2.CAP_DSHOW)
         # set to 160x120; trying to set directly those values causes slowdowns (why? idk)
         self._left_cam.set(cv2.CAP_PROP_FRAME_WIDTH, 20)
@@ -93,10 +97,11 @@ class Ext:
         """Ensures all devices are connected.
         :raise StandbyTransition: At least one device is not reachable/connected.
         """
-        if not self._left_cam or not self._left_cam.isOpened():
-            raise StandbyTransition(f'Left camera {LEFT_CAM_INDEX} is not open')
-        if not self._right_cam or not self._right_cam.isOpened():
-            raise StandbyTransition(f'Right camera {RIGHT_CAM_INDEX} is not open')
+        if not self.ignore_cameras:
+            if not self._left_cam or not self._left_cam.isOpened():
+                raise StandbyTransition(f'Left camera {LEFT_CAM_INDEX} is not open')
+            if not self._right_cam or not self._right_cam.isOpened():
+                raise StandbyTransition(f'Right camera {RIGHT_CAM_INDEX} is not open')
         if not self.ignore_motors:
             if not self._arduino or not is_arduino_connected():
                 raise StandbyTransition(f'Arduino is not connected')
@@ -111,6 +116,8 @@ class Ext:
         """Gets snapshot from both cameras.
         :return: Arm's left camera image, then arm's right camera image. Image is ``None`` if camera cannot be reached.
         """
+        if self.ignore_cameras:
+            return ndarray(shape=(1, 1), dtype=float), ndarray(shape=(1, 1), dtype=float)
         ret, frame_l = self._left_cam.read()
         if not ret:
             raise StandbyTransition(f'Left camera {LEFT_CAM_INDEX} failed to read')

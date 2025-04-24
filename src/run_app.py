@@ -7,15 +7,21 @@ from src.backend.state_management.state_manager import Manager
 from src.frontend.visualisation import Graph
 from src.frontend.gui import Gui
 
+IGNORE_MOTORS = True
+IGNORE_CAMERAS = True
 
 if __name__ == '__main__':
     # pre-check
-    #if not is_arduino_connected():
-    #    print('Please connect Arduino')
-    #    exit(1)
+    if IGNORE_CAMERAS:
+        print('!!!!! IGNORING CAMERAS')
+    if IGNORE_MOTORS:
+        print('!!!!! IGNORING SERIAL CONNECTION')
+    elif not is_arduino_connected():
+        print('Please connect Arduino')
+        exit(1)
     # create instances
     state_manager = Manager()
-    connection_manager = Ext(ignore_motors=False)
+    connection_manager = Ext(ignore_motors=IGNORE_MOTORS, ignore_cameras=IGNORE_CAMERAS)
     root = tk.Tk()
     vis = Graph(root)
     gui = Gui(root, state_manager, vis)
