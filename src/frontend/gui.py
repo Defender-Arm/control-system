@@ -171,7 +171,8 @@ class Gui:
                 except Exception as e:
                     self.add_log(f"Error processing frames: {str(e)}")
         
-        self.root.after(30, self.update_cameras)
+        # Update as fast as possible (1ms delay)
+        self.root.after(1, self.update_cameras)
 
     def update_trajectory(self):
         self.trajectory_canvas.delete("all")
