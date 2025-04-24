@@ -130,42 +130,42 @@ class Gui:
 
     def create_threshold_controls(self):
         # Create frame for threshold controls
-        threshold_frame = tk.LabelFrame(self.control_frame, text="HSV Thresholds")
-        threshold_frame.pack(fill="x", padx=5, pady=5)
+        self.threshold_frame = tk.LabelFrame(self.control_frame, text="HSV Thresholds")
+        self.threshold_frame.grid(row=1, column=0, columnspan=len(self.buttons), sticky="ew", padx=5, pady=5)
         
         # Create sliders for each threshold
-        tk.Label(threshold_frame, text="H Low:").grid(row=0, column=0, padx=5, pady=2)
-        self.low_H_scale = tk.Scale(threshold_frame, from_=0, to=180, orient="horizontal")
+        tk.Label(self.threshold_frame, text="H Low:").grid(row=0, column=0, padx=5, pady=2)
+        self.low_H_scale = tk.Scale(self.threshold_frame, from_=0, to=180, orient="horizontal")
         self.low_H_scale.set(H_LOW)
         self.low_H_scale.grid(row=0, column=1, padx=5, pady=2)
         
-        tk.Label(threshold_frame, text="H High:").grid(row=1, column=0, padx=5, pady=2)
-        self.high_H_scale = tk.Scale(threshold_frame, from_=0, to=180, orient="horizontal")
+        tk.Label(self.threshold_frame, text="H High:").grid(row=1, column=0, padx=5, pady=2)
+        self.high_H_scale = tk.Scale(self.threshold_frame, from_=0, to=180, orient="horizontal")
         self.high_H_scale.set(H_HIGH)
         self.high_H_scale.grid(row=1, column=1, padx=5, pady=2)
         
-        tk.Label(threshold_frame, text="S Low:").grid(row=2, column=0, padx=5, pady=2)
-        self.low_S_scale = tk.Scale(threshold_frame, from_=0, to=255, orient="horizontal")
+        tk.Label(self.threshold_frame, text="S Low:").grid(row=2, column=0, padx=5, pady=2)
+        self.low_S_scale = tk.Scale(self.threshold_frame, from_=0, to=255, orient="horizontal")
         self.low_S_scale.set(S_LOW)
         self.low_S_scale.grid(row=2, column=1, padx=5, pady=2)
         
-        tk.Label(threshold_frame, text="S High:").grid(row=3, column=0, padx=5, pady=2)
-        self.high_S_scale = tk.Scale(threshold_frame, from_=0, to=255, orient="horizontal")
+        tk.Label(self.threshold_frame, text="S High:").grid(row=3, column=0, padx=5, pady=2)
+        self.high_S_scale = tk.Scale(self.threshold_frame, from_=0, to=255, orient="horizontal")
         self.high_S_scale.set(S_HIGH)
         self.high_S_scale.grid(row=3, column=1, padx=5, pady=2)
         
-        tk.Label(threshold_frame, text="V Low:").grid(row=4, column=0, padx=5, pady=2)
-        self.low_V_scale = tk.Scale(threshold_frame, from_=0, to=255, orient="horizontal")
+        tk.Label(self.threshold_frame, text="V Low:").grid(row=4, column=0, padx=5, pady=2)
+        self.low_V_scale = tk.Scale(self.threshold_frame, from_=0, to=255, orient="horizontal")
         self.low_V_scale.set(V_LOW)
         self.low_V_scale.grid(row=4, column=1, padx=5, pady=2)
         
-        tk.Label(threshold_frame, text="V High:").grid(row=5, column=0, padx=5, pady=2)
-        self.high_V_scale = tk.Scale(threshold_frame, from_=0, to=255, orient="horizontal")
+        tk.Label(self.threshold_frame, text="V High:").grid(row=5, column=0, padx=5, pady=2)
+        self.high_V_scale = tk.Scale(self.threshold_frame, from_=0, to=255, orient="horizontal")
         self.high_V_scale.set(V_HIGH)
         self.high_V_scale.grid(row=5, column=1, padx=5, pady=2)
         
         # Add update button
-        self.update_thresholds_btn = tk.Button(threshold_frame, text="Update Thresholds", 
+        self.update_thresholds_btn = tk.Button(self.threshold_frame, text="Update Thresholds", 
                   command=self.update_thresholds)
         self.update_thresholds_btn.grid(row=6, column=0, columnspan=2, pady=5)
 
