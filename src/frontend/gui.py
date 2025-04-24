@@ -76,26 +76,9 @@ class Gui:
                                   font=('Courier', 10))
         self.log_list.pack(fill=tk.BOTH, expand=True)
         
-        # Right panel for camera feeds and trajectory
+        # Right panel for trajectory
         right_panel = tk.Frame(main_container)
         right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5)
-        
-        # Camera feeds
-        camera_frame = tk.Frame(right_panel)
-        camera_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-        
-        # Create frames for camera views
-        self.camera_frames = []
-        for i in range(2):
-            camera_container = tk.Frame(camera_frame)
-            camera_container.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
-            
-            # Camera view
-            frame = tk.Label(camera_container, text="Camera not available", 
-                           font=('Arial', 14), bg='#333333', fg='white')
-            frame.pack(fill=tk.BOTH, expand=True)
-            
-            self.camera_frames.append(frame)
         
         # Trajectory visualization
         trajectory_frame = tk.Frame(right_panel)
@@ -121,6 +104,13 @@ class Gui:
                 self.cap2 = None
             else:
                 self.add_log("Cameras initialized successfully")
+                
+                # Create OpenCV windows for cameras
+                cv2.namedWindow("Camera 1")
+                cv2.namedWindow("Camera 2")
+                cv2.moveWindow("Camera 1", 800, 0)
+                cv2.moveWindow("Camera 2", 1200, 0)
+                
         except Exception as e:
             self.add_log(f"Error initializing cameras: {str(e)}")
             self.cap1 = None
@@ -147,26 +137,10 @@ class Gui:
                     if center2 is not None:
                         cv2.circle(frame2, center2, 5, (255, 0, 0), -1)
                     
-                    # Convert to PhotoImage for display
-                    frame1_rgb = cv2.cvtColor(frame1, cv2.COLOR_BGR2RGB)
-                    frame2_rgb = cv2.cvtColor(frame2, cv2.COLOR_BGR2RGB)
-                    
-                    img1 = Image.fromarray(frame1_rgb)
-                    img2 = Image.fromarray(frame2_rgb)
-                    
-                    # Resize to fit the display
-                    img1 = img1.resize((400, 300))
-                    img2 = img2.resize((400, 300))
-                    
-                    photo1 = ImageTk.PhotoImage(image=img1)
-                    photo2 = ImageTk.PhotoImage(image=img2)
-                    
-                    # Update camera views
-                    self.camera_frames[0].configure(image=photo1)
-                    self.camera_frames[1].configure(image=photo2)
-                    
-                    self.camera_frames[0].image = photo1
-                    self.camera_frames[1].image = photo2
+                    # Display frames directly using OpenCV
+                    cv2.imshow("Camera 1", frame1)
+                    cv2.imshow("Camera 2", frame2)
+                    cv2.waitKey(1)  # Required for OpenCV windows to update
                     
                 except Exception as e:
                     self.add_log(f"Error processing frames: {str(e)}")
