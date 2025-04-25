@@ -7,8 +7,8 @@ from src.backend.state_management.state_manager import Manager
 from src.frontend.visualisation import Graph
 from src.frontend.gui import Gui
 
-IGNORE_MOTORS = True
-IGNORE_CAMERAS = True
+IGNORE_MOTORS = False
+IGNORE_CAMERAS = False
 
 if __name__ == '__main__':
     # pre-check

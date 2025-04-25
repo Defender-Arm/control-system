@@ -1,6 +1,8 @@
 from tkinter import Tk
 from typing import Tuple
 import numpy as np
+from PyQt6.QtCore import Qt
+
 
 from src.backend.external_management.connections import LEFT_CAM_ANGLES, LEFT_CAM_OFFSET
 from src.backend.sensor_fusion.tracking import angles_to_vector
@@ -68,22 +70,27 @@ class Graph:
         if self.canvas:
             self.canvas.close()
         # create canvas
-        self.canvas = scene.SceneCanvas(keys='interactive', size=(800, 600), show=True)
+        self.canvas = scene.SceneCanvas(keys='interactive', size=(400, 400))
         self.canvas.bgcolor = 'white'
         # create view + details
         view = self.canvas.central_widget.add_view()
         view.camera = 'turntable'
         view.camera.center = (0, 0, 0)
-        view.camera.scale_factor = 5
+        view.camera.scale_factor = 3
         scene.visuals.XYZAxis(parent=view.scene)
         # Add points + lines
         view.add(self.cam_scatter)
         view.add(self.obj_scatter)
-        #view.add(self.obj_scatter2)
+        view.add(self.obj_scatter2)
         if self.ray_lines:
             view.add(self.ray_lines[0])
             view.add(self.ray_lines[1])
-        # updates
+        # show
+        self.canvas.show()
+        self.canvas.native.setWindowFlags(self.canvas.native.windowFlags() | Qt.WindowType.WindowStaysOnTopHint)
+        self.canvas.native.show()
+
+# updates
         self.root.after(10, self.update)
 
     def update(self):

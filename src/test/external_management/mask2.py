@@ -4,6 +4,8 @@ from __future__ import print_function
 import cv2 as cv
 import argparse
 import numpy as np
+from time import sleep
+
 max_value = 255
 max_value_H = 360//2
 low_H = 170
@@ -65,6 +67,7 @@ cap1.set(cv.CAP_PROP_FRAME_HEIGHT, 20)
 cap2 = cv.VideoCapture(2, cv.CAP_DSHOW)
 cap2.set(cv.CAP_PROP_FRAME_WIDTH, 20)
 cap2.set(cv.CAP_PROP_FRAME_HEIGHT, 20)
+sleep(2)
 cv.namedWindow(window_capture_name)
 cv.namedWindow(window_detection_name)
 cv.createTrackbar(low_H_name, window_detection_name , low_H, max_value_H, on_low_H_thresh_trackbar)
@@ -73,7 +76,7 @@ cv.createTrackbar(low_S_name, window_detection_name , low_S, max_value, on_low_S
 cv.createTrackbar(high_S_name, window_detection_name , high_S, max_value, on_high_S_thresh_trackbar)
 cv.createTrackbar(low_V_name, window_detection_name , low_V, max_value, on_low_V_thresh_trackbar)
 cv.createTrackbar(high_V_name, window_detection_name , high_V, max_value, on_high_V_thresh_trackbar)
-cv.resizeWindow(window_detection_name, 1600, 1200)
+cv.resizeWindow(window_detection_name, 500, 1200)
 
 
 def process_frame(frame):

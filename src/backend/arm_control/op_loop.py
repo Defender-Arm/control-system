@@ -106,8 +106,8 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                         connection_manager.swap_cameras()
                     # check mechanical calibration
                     connection_manager.send_serial(State.CALIBRATE)
-                    #sleep(6)
                     connection_manager.recv_serial()
+                    sleep(1)
                     state_manager.ready()
                     connection_manager.send_serial(State.READY)
                     last_ang = [999, 999, 999]
@@ -160,6 +160,7 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
                         connection_manager.send_serial(State.ACTIVE, arm_angles)
                         last_ang = arm_angles
                         log_file.write(f'o {arm_angles[0]} {arm_angles[1]} {arm_angles[2]}\n')
+                        connection_manager.recv_serial()
                     else:
                         # connection_manager.send_serial(State.ACTIVE, last_ang)
                         log_file.write(f'r {last_ang[0]} {last_ang[1]} {last_ang[2]}\n')
@@ -178,6 +179,7 @@ def operation_loop(state_manager: Manager, connection_manager: Ext, gui: Gui, vi
             if last_state == State.ACTIVE and current_state == State.READY:
                 # end with return to (0,0,0)
                 connection_manager.send_serial(State.ACTIVE)
+                connection_manager.recv_serial()
             last_state = current_state
             gui.set_state(current_state)
             post_msg(f'State transition to {current_state.name}', gui, False)

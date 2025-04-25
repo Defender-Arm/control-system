@@ -42,7 +42,7 @@ class Gui:
         
         # Control panel
         control_frame = tk.Frame(left_panel)
-        control_frame.pack(fill=tk.X, pady=5)
+        control_frame.pack(anchor='center', pady=5)
         
         # State buttons with consistent styling
         button_styles = {
@@ -63,7 +63,7 @@ class Gui:
         
         self.buttons = {}
         for i, (text, command) in enumerate(button_commands.items()):
-            btn = tk.Button(control_frame, text=text, width=10, command=command,
+            btn = tk.Button(control_frame, text=text, width=10, command=command, font=("TkDefaultFont", 16),
                           **button_styles[text])
             btn.grid(row=0, column=i, padx=2)
             self.buttons[text] = btn
@@ -72,113 +72,28 @@ class Gui:
         log_frame = tk.Frame(left_panel)
         log_frame.pack(fill=tk.BOTH, expand=True, pady=5)
         
-        self.log_list = tk.Listbox(log_frame, width=50, height=20,
+        self.log_list = tk.Listbox(log_frame, width=100, height=20,
                                   font=('Courier', 10))
         self.log_list.pack(fill=tk.BOTH, expand=True)
         
-        # Right panel for trajectory
+        # Right panel for other
         right_panel = tk.Frame(main_container)
         right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5)
-        
+
+        # vis frame
+        control_frame = tk.Frame(right_panel)
+        control_frame.pack(fill=tk.X, pady=5)
+
+        # show graph button
+        vis_button = tk.Button(control_frame, text="System Visualisation", command=vis.show)
+        vis_button.pack(anchor='center', padx=5)
+
         # Trajectory visualization
         trajectory_frame = tk.Frame(right_panel)
         trajectory_frame.pack(fill=tk.BOTH, expand=True, pady=5)
-        
+
         self.trajectory_canvas = tk.Canvas(trajectory_frame, bg='black')
         self.trajectory_canvas.pack(fill=tk.BOTH, expand=True)
-        
-        # Initialize cameras
-        try:
-            self.cap1 = cv2.VideoCapture(1, cv2.CAP_DSHOW)
-            self.cap2 = cv2.VideoCapture(2, cv2.CAP_DSHOW)
-            
-            # Set very low resolution for faster processing (like in mask2.py)
-            self.cap1.set(cv2.CAP_PROP_FRAME_WIDTH, 20)
-            self.cap1.set(cv2.CAP_PROP_FRAME_HEIGHT, 20)
-            self.cap2.set(cv2.CAP_PROP_FRAME_WIDTH, 20)
-            self.cap2.set(cv2.CAP_PROP_FRAME_HEIGHT, 20)
-            
-            if not self.cap1.isOpened() or not self.cap2.isOpened():
-                self.add_log("Warning: One or more cameras not available")
-                self.cap1 = None
-                self.cap2 = None
-            else:
-                self.add_log("Cameras initialized successfully")
-                
-                # Create OpenCV windows for cameras
-                cv2.namedWindow("Camera 1")
-                cv2.namedWindow("Camera 2")
-                cv2.moveWindow("Camera 1", 800, 0)
-                cv2.moveWindow("Camera 2", 1200, 0)
-                
-        except Exception as e:
-            self.add_log(f"Error initializing cameras: {str(e)}")
-            self.cap1 = None
-            self.cap2 = None
-        
-        # Start update loop
-        self.update_cameras()
-        self.update_trajectory()
-
-    def update_cameras(self):
-        if self.cap1 is not None and self.cap2 is not None:
-            ret1, frame1 = self.cap1.read()
-            ret2, frame2 = self.cap2.read()
-            
-            if ret1 and ret2:
-                try:
-                    # Process frames using find_in_image
-                    center1, angle1 = find_in_image(frame1)
-                    center2, angle2 = find_in_image(frame2)
-                    
-                    # Draw the results on the frames
-                    if center1 is not None:
-                        cv2.circle(frame1, center1, 5, (255, 0, 0), -1)
-                    if center2 is not None:
-                        cv2.circle(frame2, center2, 5, (255, 0, 0), -1)
-                    
-                    # Display frames directly using OpenCV
-                    cv2.imshow("Camera 1", frame1)
-                    cv2.imshow("Camera 2", frame2)
-                    cv2.waitKey(1)  # Required for OpenCV windows to update
-                    
-                except Exception as e:
-                    self.add_log(f"Error processing frames: {str(e)}")
-        
-        # Update as fast as possible (1ms delay)
-        self.root.after(1, self.update_cameras)
-
-    def update_trajectory(self):
-        self.trajectory_canvas.delete("all")
-        
-        # Draw grid
-        width = self.trajectory_canvas.winfo_width()
-        height = self.trajectory_canvas.winfo_height()
-        
-        # Draw horizontal lines
-        for i in range(0, height, 50):
-            self.trajectory_canvas.create_line(0, i, width, i, fill='#333333')
-        
-        # Draw vertical lines
-        for i in range(0, width, 50):
-            self.trajectory_canvas.create_line(i, 0, i, height, fill='#333333')
-        
-        # Draw robot arm representation
-        center_x = width // 2
-        center_y = height // 2
-        
-        # Base
-        self.trajectory_canvas.create_oval(center_x-20, center_y-20, 
-                                         center_x+20, center_y+20, 
-                                         fill='#666666')
-        
-        # Arm segments (example)
-        self.trajectory_canvas.create_line(center_x, center_y, 
-                                         center_x+100, center_y-100, 
-                                         fill='#4ecdc4', width=3)
-        
-        # Update every 100ms
-        self.root.after(100, self.update_trajectory)
 
     def set_state(self, state: State):
         """Update the active state and disable buttons for invalid transitions.
@@ -186,10 +101,7 @@ class Gui:
         for text, btn in self.buttons.items():
             condition = MANUAL_TRANSITION_DICT[state] & (int('10000', 2) >> list(self.buttons.keys()).index(text))
             btn.config(state=tk.NORMAL if condition else tk.DISABLED)
-            if condition:
-                btn.config(borderwidth=4)
-            else:
-                btn.config(borderwidth=1)
+            btn.config(borderwidth=4 if state.name == text else 1)
 
     def add_log(self, log: str):
         """Add an entry to the log and highlight briefly.
